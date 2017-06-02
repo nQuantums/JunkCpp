@@ -23,11 +23,11 @@ template<
 	typedef double AngleType; //!< 角度型
 
 	static _FINLINE T SinRad(AngleType rad) {
-		return ::sin(rad);
+		return T(::sin(rad));
 	}
 
 	static _FINLINE T CosRad(AngleType rad) {
-		return ::cos(rad);
+		return T(::cos(rad));
 	}
 
 	static _FINLINE AngleType ATan2Rad(T y, T x) {
@@ -35,11 +35,11 @@ template<
 	}
 
 	static _FINLINE T SinDeg(AngleType deg) {
-		return ::sin(JUNK_DEGTORAD * deg);
+		return T(::sin(JUNK_DEGTORAD * deg));
 	}
 
 	static _FINLINE T CosDeg(AngleType deg) {
-		return ::cos(JUNK_DEGTORAD * deg);
+		return T(::cos(JUNK_DEGTORAD * deg));
 	}
 
 	static _FINLINE AngleType ATan2Deg(T y, T x) {
@@ -143,12 +143,9 @@ template<
 		Order<TmSet, N>::BinaryAssign(p, e);
 	}
 
-	// _FINLINE const T& operator()(intptr_t i) const {
-	// 	return e[i];
-	// }
-	// _FINLINE T& operator()(intptr_t i) {
-	// 	return e[i];
-	// }
+	_FINLINE bool IsZero() const {
+		return Order<TmNone, N>::EqualScalar(e, T(0));
+	}
 
 	std::string ToJsonString() const {
 		std::ostringstream o;
@@ -238,7 +235,7 @@ template<
 	}
 	_FINLINE VectorN operator/(const VectorN& v) const {
 		VectorN nv;
-		Order<TmDiv, N>::BinaryScalar(nv.e, e, v.e);
+		Order<TmDiv, N>::Binary(nv.e, e, v.e);
 		return nv;
 	}
 	_FINLINE VectorN& operator+=(const VectorN& v) {
@@ -292,6 +289,9 @@ template<
 	_FINLINE bool operator<(const VectorN& v) const {
 		return Order<TmNone, N>::LessThan(e, v.e);
 	}
+	_FINLINE bool operator<=(const VectorN& v) const {
+		return Order<TmNone, N>::LessThanOrEqual(e, v.e);
+	}
 
 	_FINLINE T Dot(const VectorN& v) const {
 		T s;
@@ -303,48 +303,131 @@ template<
 		Order<TmNone, N>::Cross(nv.e, e, v.e);
 		return nv;
 	}
-	_FINLINE T operator|(const VectorN& v) const {
-		return Dot(v);
-	}
-	_FINLINE VectorN operator%(const VectorN& v) const {
-		return Cross(v);
-	}
 
 	_FINLINE T LengthSquare() const {
 		T s;
-		Order<TmNone, N>::Square(s, e);
+		Order<TmSquareAdd, N>::HorizontalBinary(s, e);
 		return s;
 	}
 	_FINLINE T Length() const {
 		return T(Math::Sqrt(LengthSquare()));
 	}
-	_FINLINE void Relength(T len) {
+
+	_FINLINE void RelengthSelf(T len) {
 		T s(Length());
-		if(s == T(0) || s == len)
+		if (s == T(0) || s == len)
 			return;
 		Order<TmMul, N>::BinaryAssignScalar(e, len / s);
 	}
+	_FINLINE VectorN Relength(T len) const {
+		T s(Length());
+		if (s == T(0) || s == len)
+			return *this;
+		VectorN v;
+		Order<TmMul, N>::BinaryScalar(v.e, e, len / s);
+		return v;
+	}
 
 	_FINLINE void NormalizeSelf() {
-		T len = T(Length());
-		if(len != T(0) || len != T(1))
-			Order<TmMul, N>::BinaryAssign(e, T(1) / len);
+		T s(Length());
+		if (s == T(0) || s == 1)
+			return;
+		Order<TmMul, N>::BinaryAssignScalar(e, 1 / s);
 	}
-	_FINLINE VectorN Normalize() {
-		T len = T(Length());
-		if(len != T(0)) {
-			VectorN nv;
-			Order<TmMul, N>::Binary(nv.e, e, T(1) / len);
-			return nv;
-		} else {
+	_FINLINE VectorN Normalize() const {
+		T s(Length());
+		if (s == T(0) || s == 1)
 			return *this;
-		}
+		VectorN v;
+		Order<TmMul, N>::BinaryScalar(v.e, e, 1 / s);
+		return v;
 	}
 
-	_FINLINE void Reflect(const VectorN& unitVec) {
-		T s(Dot(unitVec) * T(2));
-		for(intptr_t i = N - 1; i != -1; --i)
-			e[i] += e[i] * s;
+	_FINLINE T Max() const {
+		T s;
+		Order<TmMax, N>::HorizontalBinary(s, e);
+		return s;
+	}
+
+	_FINLINE T Min() const {
+		T s;
+		Order<TmMin, N>::HorizontalBinary(s, e);
+		return s;
+	}
+
+	_FINLINE intptr_t ArgMax() const {
+		auto s = e[N - 1];
+		intptr_t index = N - 1;
+		for (intptr_t i = N - 2; i != -1; --i) {
+			auto t = e[i];
+			if (s < t) {
+				s = t;
+				index = i;
+			}
+		}
+		return index;
+	}
+
+	_FINLINE intptr_t ArgMin() const {
+		auto s = e[N - 1];
+		intptr_t index = N - 1;
+		for (intptr_t i = N - 2; i != -1; --i) {
+			auto t = e[i];
+			if (s > t) {
+				s = t;
+				index = i;
+			}
+		}
+		return index;
+	}
+
+	_FINLINE T Sum() const {
+		T s;
+		Order<TmAdd, N>::HorizontalBinary(s, e);
+		return s;
+	}
+
+	_FINLINE T Product() const {
+		T s;
+		Order<TmMul, N>::HorizontalBinary(s, e);
+		return s;
+	}
+
+	_FINLINE void ElementWiseMaxSelf(const VectorN& v) {
+		Order<TmMax, N>::BinaryAssign(e, v.e);
+	}
+	_FINLINE VectorN ElementWiseMax(const VectorN& v) const {
+		VectorN r;
+		Order<TmMax, N>::Binary(r.e, e, v.e);
+		return r;
+	}
+
+	_FINLINE void ElementWiseMinSelf(const VectorN& v) {
+		Order<TmMin, N>::BinaryAssign(e, v.e);
+	}
+	_FINLINE VectorN ElementWiseMin(const VectorN& v) const {
+		VectorN r;
+		Order<TmMin, N>::Binary(r.e, e, v.e);
+		return r;
+	}
+
+	_FINLINE void ReflectSelf(const VectorN& unitVec) {
+		Order<TmMulSub, N>::BinaryScalarModulate(e, unitVec.e, Dot(unitVec) * T(2));
+	}
+	_FINLINE VectorN Reflect(const VectorN& unitVec) {
+		return *this - (unitVec * (Dot(unitVec) * T(2)));
+	}
+
+	_FINLINE static VectorN Zero() {
+		VectorN r;
+		Order<TmSet, N>::BinaryAssignScalar(r.e, T(0));
+		return r;
+	}
+
+	_FINLINE static VectorN Axis(int index) {
+		VectorN r;
+		Order<TmSet, N>::BinaryAssignByIndex(r.e, index, T(1), T(0));
+		return r;
 	}
 };
 
@@ -501,13 +584,13 @@ template<
 	}
 
 	_FINLINE void Set(const T* p) {
-		Order<TmSet, N>::BinaryAssign(e, p);
+		Order<TmSet, N>::BinaryAssign(this->e, p);
 	}
 
 	template<class S> _FINLINE void Set(std::initializer_list<S> list) {
 		intptr_t i = 0;
 		for (auto iter = list.begin(); i < N && iter != list.end(); ++i, ++iter)
-			e[i] = T(*iter);
+			this->e[i] = T(*iter);
 	}
 
 

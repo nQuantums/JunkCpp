@@ -148,10 +148,10 @@ template<
 	}
 
 	template<intptr_t L> Self& Mul(const MatrixMxN<T, R, L, SEL, Math>& m1, const MatrixMxN<T, L, C, SEL, Math>& m2) {
-		for(intptr_t i = 0; i < R; i++) {
-			for(intptr_t j = 0; j < C; j++) {
+		for (intptr_t i = 0; i < R; i++) {
+			for (intptr_t j = 0; j < C; j++) {
 				T t = m1(i, 0) * m2(0, j);
-				for(intptr_t k = 1; k < L; k++)
+				for (intptr_t k = 1; k < L; k++)
 					t += m1(i, k) * m2(k, j);
 				(*this)(i, j) = t;
 			}
@@ -185,7 +185,7 @@ template<
 		T& rdet, //!< [out] 行列式が返る
 		T eps //! [in] 計算機イプシロン(絶対値がこの値以下の場合はゼロと判定される)
 	) {
-		if(ROW == COLUMN) {
+		if (ROW == COLUMN) {
 			enum { N = ROW };
 			int i, j, k, ii, ik;
 			T t, u, det;
@@ -245,7 +245,7 @@ template<
 		V& x, //!< [out] x の値が返る
 		T eps //! [in] 計算機イプシロン(絶対値がこの値以下の場合はゼロと判定される)
 	) const {
-		if(ROW == COLUMN && ROW <= b.N) {
+		if (ROW == COLUMN && ROW <= b.N) {
 			enum { N = ROW };
 			int i, j, ii;
 			T t;
@@ -263,7 +263,7 @@ template<
 				for (j = i + 1; j < N; j++)
 					t -= (*this)(ii, j) * x(j);
 				T buf = (*this)(ii, i);
-				if(Math::Abs(buf) <= eps)
+				if (Math::Abs(buf) <= eps)
 					return false;
 				x(i) = t / buf;
 			}
@@ -282,14 +282,14 @@ template<
 		T& rdet, //!< [out] 行列式が返る
 		T eps //! [in] 計算機イプシロン(絶対値がこの値以下の場合はゼロと判定される)
 	) {
-		if(ROW == COLUMN) {
+		if (ROW == COLUMN) {
 			enum { N = ROW };
 			int i, j, k, ii;
 			T t;
 			int ip[N];   // 行交換の情報
 			Self m2 = m;
 
-			if(!m2.Lu(ip, rdet, eps) || Math::Abs(rdet) <= eps)
+			if (!m2.Lu(ip, rdet, eps) || Math::Abs(rdet) <= eps)
 				return false;
 
 			for (k = 0; k < N; k++) {
@@ -533,9 +533,9 @@ template<
 	}
 
 	Self& Scale(T x, T y, T z) {
-		SetRowVector(0,    x, T(0), T(0), T(0));
-		SetRowVector(1, T(0),    y, T(0), T(0));
-		SetRowVector(2, T(0), T(0),    z, T(0));
+		SetRowVector(0, x, T(0), T(0), T(0));
+		SetRowVector(1, T(0), y, T(0), T(0));
+		SetRowVector(2, T(0), T(0), z, T(0));
 		SetRowVector(3, T(0), T(0), T(0), T(1));
 		return *this;
 	}
@@ -554,11 +554,11 @@ template<
 	Self& RotateX(T s, T c) {
 		SetRowVector(0, T(1), T(0), T(0), T(0));
 		SetRowVector(3, T(0), T(0), T(0), T(1));
-		if(SEL::RightHand) {
+		if (SEL::RightHand) {
 			SetRowVector(1, T(0), c, -s, T(0));
-			SetRowVector(2, T(0), s,  c, T(0));
+			SetRowVector(2, T(0), s, c, T(0));
 		} else {
-			SetRowVector(1, T(0),  c, s, T(0));
+			SetRowVector(1, T(0), c, s, T(0));
 			SetRowVector(2, T(0), -s, c, T(0));
 		}
 		return *this;
@@ -575,12 +575,12 @@ template<
 	Self& RotateY(T s, T c) {
 		SetRowVector(1, T(0), T(1), T(0), T(0));
 		SetRowVector(3, T(0), T(0), T(0), T(1));
-		if(SEL::RightHand) {
-			SetRowVector(0,  c, T(0), s, T(0));
+		if (SEL::RightHand) {
+			SetRowVector(0, c, T(0), s, T(0));
 			SetRowVector(2, -s, T(0), c, T(0));
 		} else {
 			SetRowVector(0, c, T(0), -s, T(0));
-			SetRowVector(2, s, T(0),  c, T(0));
+			SetRowVector(2, s, T(0), c, T(0));
 		}
 		return *this;
 	}
@@ -596,11 +596,11 @@ template<
 	Self& RotateZ(T s, T c) {
 		SetRowVector(2, T(0), T(0), T(1), T(0));
 		SetRowVector(3, T(0), T(0), T(0), T(1));
-		if(SEL::RightHand) {
+		if (SEL::RightHand) {
 			SetRowVector(0, c, -s, T(0), T(0));
-			SetRowVector(1, s,  c, T(0), T(0));
+			SetRowVector(1, s, c, T(0), T(0));
 		} else {
-			SetRowVector(0,  c, s, T(0), T(0));
+			SetRowVector(0, c, s, T(0), T(0));
 			SetRowVector(1, -s, c, T(0), T(0));
 		}
 		return *this;
@@ -615,22 +615,22 @@ template<
 	}
 
 	Self& RotateAxis(T x, T y, T z, T s, T c) {
-		T ic = T(1)-c;
+		T ic = T(1) - c;
 		T icx = ic*x;
 		T icy = ic*y;
 		T icz = ic*z;
 		T icxy = icx*y;
 		T icxz = icx*z;
 		T icyz = icy*z;
-		if(SEL::RightHand) {
-			SetColVector(0, icx*x+c, s*z+icxy, icxz-s*y, T(0));
-			SetColVector(1, icxy-s*z, icy*y+c, icyz+s*x, T(0));
-			SetColVector(2, icxz+s*y, icyz-s*x, icz*z+c, T(0));
+		if (SEL::RightHand) {
+			SetColVector(0, icx*x + c, s*z + icxy, icxz - s*y, T(0));
+			SetColVector(1, icxy - s*z, icy*y + c, icyz + s*x, T(0));
+			SetColVector(2, icxz + s*y, icyz - s*x, icz*z + c, T(0));
 			SetColVector(3, T(0), T(0), T(0), T(T(1)));
 		} else {
-			SetRowVector(0, icx*x+c, s*z+icxy, icxz-s*y, T(0));
-			SetRowVector(1, icxy-s*z, icy*y+c, icyz+s*x, T(0));
-			SetRowVector(2, icxz+s*y, icyz-s*x, icz*z+c, T(0));
+			SetRowVector(0, icx*x + c, s*z + icxy, icxz - s*y, T(0));
+			SetRowVector(1, icxy - s*z, icy*y + c, icyz + s*x, T(0));
+			SetRowVector(2, icxz + s*y, icyz - s*x, icz*z + c, T(0));
 			SetRowVector(3, T(0), T(0), T(0), T(T(1)));
 		}
 		return *this;
@@ -681,7 +681,7 @@ template<
 		x.NormalizeSelf();
 		y.NormalizeSelf();
 		z.NormalizeSelf();
-		if(SEL::RightHand) {
+		if (SEL::RightHand) {
 			SetRowVector(0, x(0), x(1), x(2), -x.Dot(from));
 			SetRowVector(1, y(0), y(1), y(2), -y.Dot(from));
 			SetRowVector(2, z(0), z(1), z(2), -z.Dot(from));
@@ -792,7 +792,7 @@ template<
 		SetRowVector(1, m(0, 1), m(1, 1), m(2, 1));
 		SetRowVector(2, m(0, 2), m(1, 2), m(2, 2));
 		(*this)(3, 3) = T(1);
-		if(SEL::RightHand) {
+		if (SEL::RightHand) {
 			VectorN<T, 3, Math> t = m.GetColVector3(3);
 			(*this)(0, 3) = -m(0, 0) * t(0) - m(1, 0) * t(1) - m(2, 0) * t(2);
 			(*this)(1, 3) = -m(0, 1) * t(0) - m(1, 1) * t(1) - m(2, 1) * t(2);
