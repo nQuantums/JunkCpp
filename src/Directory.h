@@ -12,6 +12,8 @@ _JUNK_BEGIN
 class Directory {
 public:
 	static ibool GetCurrent(std::string& curDir); //!< カレントディレクトリを取得する
+	static ibool Exists(const char* pszDir); //!< 指定されたディレクトリが存在しているか調べる
+	static ibool Create(const char* pszDir); //!< 指定されたディレクトリを作成する
 };
 
 _JUNK_END

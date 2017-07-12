@@ -82,14 +82,14 @@ std::string SocketRef::GetRemoteName(
 	switch (addrst.ss_family) {
 	case AF_INET:
 	{
-		const auto& v4 = (const sockaddr_in&)addrst;
-		auto p = inet_ntop(AF_INET, (void*)&v4.sin_addr, buf, sizeof(buf));
+		const sockaddr_in& v4 = (const sockaddr_in&)addrst;
+		PCSTR p = inet_ntop(AF_INET, (void*)&v4.sin_addr, buf, sizeof(buf));
 		return p ? p : "";
 	}
 	case AF_INET6:
 	{
-		const auto& v6 = (const sockaddr_in6&)addrst;
-		auto p = inet_ntop(AF_INET6, (void*)&v6.sin6_addr, buf, sizeof(buf));
+		const sockaddr_in6& v6 = (const sockaddr_in6&)addrst;
+		PCSTR p = inet_ntop(AF_INET6, (void*)&v6.sin6_addr, buf, sizeof(buf));
 		return p ? p : "";
 		//if (IN6_IS_ADDR_V4MAPPED(&v6.sin6_addr)) {
 		// IPv6にマップされたIPv4だけど面倒なので対応しない
@@ -101,10 +101,40 @@ std::string SocketRef::GetRemoteName(
 	}
 }
 
+//! ローカルホスト名を取得
+std::string SocketRef::GetHostName() {
+	char name[256];
+	gethostname(name, sizeof(name));
+	return name;
+}
+
+//! ローカルIPアドレスを取得
+std::string SocketRef::GetLocalIPAddress(Af af) {
+	jk::Socket::Endpoint ep;
+	std::vector<std::string> hosts, services;
+	ep.Create(GetHostName().c_str(), NULL, jk::Socket::St::Stream, af);
+	ep.GetNames(hosts, services);
+	if(hosts.empty())
+		return "";
+	return hosts[0];
+}
+
+//! ローカルIPアドレス列を取得
+void SocketRef::GetLocalIPAddress(std::vector<std::string>& addresses, Af af) {
+	jk::Socket::Endpoint ep;
+	std::vector<std::string> hosts, services;
+	ep.Create(GetHostName().c_str(), NULL, jk::Socket::St::Stream, af);
+	ep.GetNames(hosts, services);
+	for(size_t i = 0; i < hosts.size(); i++) {
+		addresses.push_back(hosts[i]);
+	}
+}
+
+
 //! 指定ホスト名、サービス名、ヒントからアドレス情報を取得し保持する
 bool SocketRef::Endpoint::Create(
 	const char* pszHost, //!< [in,optional] ホスト名、IPv4とIPv6の文字列もいける、サーバーの場合には NULL を指定すると INADDR_ANY (0.0.0.0), IN6ADDR_ANY_INIT (::) 扱いになる、ちなみにUDPのブロードキャストは 192.168.1.255 みたいな感じ
-	const char* pszService, //!< [in,optional] サービス名(httpなど)またはポート番号
+	const char* pszService, //!< [in,optional] サービス名(httpなど)または文字列でポート番号
 	const addrinfo* pHint //!< [in,optional] ソケットタイプを決めるヒント情報、ai_addrlen, ai_canonname, ai_addr, ai_next は0にしておくこと
 ) {
 	addrinfo* pRet = NULL;

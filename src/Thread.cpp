@@ -173,6 +173,58 @@ void Mutex::Destroy() {
 
 
 //==============================================================================
+//		CriticalSection クラス
+
+//! コンストラクタ
+CriticalSection::CriticalSection() {
+#if defined __GNUC__
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&m_mutex, &attr);
+#else
+	::InitializeCriticalSection(&m_Cs);
+#endif
+}
+//! デストラクタ
+CriticalSection::~CriticalSection() {
+#if defined __GNUC__
+	pthread_mutex_destroy(&m_mutex);
+#else
+	::DeleteCriticalSection(&m_Cs);
+#endif
+}
+
+//! ロックする
+void CriticalSection::Lock() {
+#if defined __GNUC__
+	pthread_mutex_lock(&m_mutex);
+#else
+	::EnterCriticalSection(&m_Cs);
+#endif
+}
+
+//! アンロックする
+void CriticalSection::Unlock() {
+#if defined __GNUC__
+	pthread_mutex_unlock(&m_mutex);
+#else
+	::LeaveCriticalSection(&m_Cs);
+#endif
+}
+
+//! コンストラクタと同じように内部オブジェクトを初期化する
+void CriticalSection::Initialize() {
+	new(this) CriticalSection();
+}
+
+//! デストラクタと同じように内部オブジェクトを破棄する
+void CriticalSection::Destroy() {
+	this->~CriticalSection();
+}
+
+
+//==============================================================================
 //		Event クラス
 
 //! コンストラクタ

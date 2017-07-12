@@ -38,4 +38,35 @@ ibool Directory::GetCurrent(
 #endif
 }
 
+//!< 指定されたディレクトリが存在しているか調べる
+ibool Directory::Exists(
+	const char* pszDir // [in] ディレクトリパス名
+) {
+#if defined __GNUC__
+#error gcc version is not implemented.
+#elif defined  _WIN32
+	DWORD dwAttrib = ::GetFileAttributesA(pszDir);
+	if(dwAttrib == INVALID_FILE_ATTRIBUTES) {
+		Error::SetLastErrorFromWinErr();
+		return false;
+	}
+	return (dwAttrib != INVALID_FILE_ATTRIBUTES &&  (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+#endif
+}
+
+//! 指定されたディレクトリを作成する
+ibool Directory::Create(
+	const char* pszDir // [in] ディレクトリパス名
+) {
+#if defined __GNUC__
+#error gcc version is not implemented.
+#elif defined  _WIN32
+	if(!::CreateDirectoryA(pszDir, NULL)) {
+		Error::SetLastErrorFromWinErr();
+		return false;
+	}
+	return true;
+#endif
+}
+
 _JUNK_END

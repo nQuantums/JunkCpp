@@ -90,6 +90,24 @@ protected:
 #endif
 };
 
+//! クリティカルセクション
+class CriticalSection {
+public:
+	CriticalSection(); //!< コンストラクタ
+	~CriticalSection(); // デストラクタ
+	void Lock(); //!< ロックする
+	void Unlock(); //!< アンロックする
+	void Initialize(); //!< コンストラクタと同じように内部オブジェクトを初期化する
+	void Destroy(); //!< デストラクタと同じように内部オブジェクトを破棄する
+
+protected:
+#if defined __GNUC__
+	pthread_mutex_t m_mutex; //!< ミューテックス
+#else
+	CRITICAL_SECTION m_Cs; //!< クリティカルセクション
+#endif
+};
+
 //! イベント
 class Event {
 public:
@@ -139,6 +157,7 @@ protected:
 };
 
 typedef Lock<Mutex> MutexLock; //!< Mutex 用ロック
+typedef Lock<CriticalSection> CriticalSectionLock; //!< Mutex 用ロック
 
 _JUNK_END
 

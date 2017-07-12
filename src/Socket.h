@@ -37,14 +37,22 @@ struct SocketRef {
 #endif
 
 	//! Shutdown() メソッドに渡す列挙値
+#if _MSC_VER <= 1500
+	enum Sd {
+#else
 	enum class Sd : intptr_t {
+#endif
 		Read = 0, //!< 読み込みをシャットダウン
 		RWrite = 1, //!< 書き込みをシャットダウン
 		Both = 2, //!< 読み書き両方をシャットダウン
 	};
 
 	//! ソケットタイプ
+#if _MSC_VER <= 1500
+	enum St {
+#else
 	enum class St : intptr_t {
+#endif
 		Stream = SOCK_STREAM, //!< ストリームソケット
 		Dgram = SOCK_DGRAM, //!< データグラムソケット
 		Raw = SOCK_RAW, //!< 生プロトコルインターフェース
@@ -53,7 +61,11 @@ struct SocketRef {
 	};
 
 	//! アドレスファミリ
+#if _MSC_VER <= 1500
+	enum Af {
+#else
 	enum class Af : intptr_t {
+#endif
 		IPv4 = AF_INET, //!< IPv4
 		IPv6 = AF_INET6, //!< IPv6
 	};
@@ -229,6 +241,16 @@ struct SocketRef {
 	//! リモート名の取得
 	static std::string GetRemoteName(const sockaddr_storage& addrst);
 
+	//! ローカルホスト名を取得
+	static std::string GetHostName();
+
+	//! ローカルIPアドレスを取得
+	static std::string GetLocalIPAddress(Af af = Af::IPv4);
+
+	//! ローカルIPアドレス列を取得
+	static void GetLocalIPAddress(std::vector<std::string>& addresses, Af af = Af::IPv4);
+
+
 	//! コンストラクタ
 	SocketRef() {
 		m_hSock = InvalidHandle();
@@ -238,9 +260,17 @@ struct SocketRef {
 		m_hSock = handle;
 	}
 
+
 	//! 自分に無効ソケットハンドルが設定されているかどうか
 	_FINLINE bool IsInvalidHandle() {
 		return m_hSock == InvalidHandle();
+	}
+
+	//! ハンドルをアタッチする、以前のハンドルが返る
+	Handle Attach(Handle newHandle) {
+		Handle handle = m_hSock;
+		m_hSock = newHandle;
+		return handle;
 	}
 
 	//! ソケットハンドルを切り離し、所有者を呼び出し元に変更する
@@ -264,7 +294,7 @@ struct SocketRef {
 
 	//! Endpoint でソケットを作成
 	bool Create(const Endpoint& endpoint, int index = 0) {
-		auto ai = endpoint.AddrInfos[index];
+		addrinfo* ai = endpoint.AddrInfos[index];
 		m_hSock = socket(ai->ai_family, ai->ai_socktype, 0);
 		return m_hSock != InvalidHandle();
 	}
@@ -298,7 +328,7 @@ struct SocketRef {
 
 	//! 指定の Endpoint に接続する
 	bool Connect(const Endpoint& endpoint, int index = 0) {
-		auto ai = endpoint.AddrInfos[index];
+		addrinfo* ai = endpoint.AddrInfos[index];
 		return connect(m_hSock, ai->ai_addr, ai->ai_addrlen) == 0;
 	}
 
@@ -322,7 +352,7 @@ struct SocketRef {
 
 	//! ソケットを指定の Endpoint にバインドする
 	bool Bind(const Endpoint& endpoint, int index = 0) {
-		auto ai = endpoint.AddrInfos[index];
+		addrinfo* ai = endpoint.AddrInfos[index];
 		return bind(m_hSock, ai->ai_addr, ai->ai_addrlen) == 0;
 	}
 
@@ -482,6 +512,15 @@ struct SocketRef {
 		return errno == EAGAIN;
 #elif defined _MSC_VER
 		return ::WSAGetLastError() == WSAEWOULDBLOCK;
+#endif
+	}
+
+	//! ブロッキングモードで Recv() または RecvFrom() 呼び出し時に負数が返った場合にタイムアウトによりエラーとなったかどうか調べる
+	_FINLINE bool TimedOutRecvError() {
+#ifdef __GNUC__
+		return errno == EAGAIN || errno == EWOULDBLOCK;
+#elif defined _MSC_VER
+		return ::WSAGetLastError() == WSAETIMEDOUT;
 #endif
 	}
 };

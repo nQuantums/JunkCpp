@@ -5,7 +5,36 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stddef.h>
+#if _MSC_VER <= 1500
+typedef signed char        int8_t;
+typedef short              int16_t;
+typedef int                int32_t;
+typedef long long          int64_t;
+typedef unsigned char      uint8_t;
+typedef unsigned short     uint16_t;
+typedef unsigned int       uint32_t;
+typedef unsigned long long uint64_t;
+
+typedef signed char        int_least8_t;
+typedef short              int_least16_t;
+typedef int                int_least32_t;
+typedef long long          int_least64_t;
+typedef unsigned char      uint_least8_t;
+typedef unsigned short     uint_least16_t;
+typedef unsigned int       uint_least32_t;
+typedef unsigned long long uint_least64_t;
+
+typedef signed char        int_fast8_t;
+typedef int                int_fast16_t;
+typedef int                int_fast32_t;
+typedef long long          int_fast64_t;
+typedef unsigned char      uint_fast8_t;
+typedef unsigned int       uint_fast16_t;
+typedef unsigned int       uint_fast32_t;
+typedef unsigned long long uint_fast64_t;
+#else
 #include <stdint.h>
+#endif
 
 // ネームスペース用マクロ
 #define _JUNK_BEGIN namespace jk {
@@ -36,41 +65,6 @@
 #define _FINLINE inline __forceinline
 #endif
 
-//// ビット数を明確にした整数型宣言
-//#ifndef _STDINT
-//typedef char int8_t;
-//typedef short int16_t;
-//typedef int int32_t;
-//typedef unsigned char uint8_t;
-//typedef unsigned short uint16_t;
-//typedef unsigned int uint32_t;
-//#if defined __GNUC__
-//typedef signed long long int64_t;
-//typedef unsigned long long uint64_t;
-//#elif defined  _MSC_VER
-//typedef __int64 int64_t;
-//typedef unsigned __int64 uint64_t;
-//#endif
-//#endif
-//
-//// ポインタサイズと同じビット数になる整数型宣言
-//#if defined __GNUC__
-//#ifdef __x86_64__
-//typedef long long intptr_t;
-//typedef unsigned long long UIntPtr;
-//#else
-//typedef int intptr_t;
-//typedef unsigned int UIntPtr;
-//#endif
-//#elif defined  _MSC_VER
-//#ifdef _WIN64
-//typedef __int64 intptr_t;
-//typedef unsigned __int64 UIntPtr;
-//#else
-//typedef int intptr_t;
-//typedef unsigned int UIntPtr;
-//#endif
-//#endif
 
 _JUNK_BEGIN
 //! bool 型を使うと遅いことがあるのでアーキテクチャのbit数に合わせたもの
