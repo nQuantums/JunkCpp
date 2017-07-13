@@ -1,4 +1,5 @@
 ﻿#include "Socket.h"
+#include "Encoding.h"
 #if defined __GNUC__
 #elif defined  _MSC_VER
 #include <ws2ipdef.h>
@@ -9,6 +10,9 @@
 #endif
 
 _JUNK_BEGIN
+
+static Encoding g_Enc = Encoding::ASCII();
+
 
 //! 時間を ms 単位から timeval に変換
 timeval SocketRef::MsToTimeval(int64_t ms) {
@@ -120,6 +124,17 @@ std::string SocketRef::GetLocalIPAddress(Af af) {
 }
 
 //! ローカルIPアドレス列を取得
+void SocketRef::GetLocalIPAddress(std::vector<std::wstring>& addresses, Af af) {
+	jk::Socket::Endpoint ep;
+	std::vector<std::string> hosts, services;
+	ep.Create(GetHostName().c_str(), NULL, jk::Socket::St::Stream, af);
+	ep.GetNames(hosts, services);
+	for(size_t i = 0; i < hosts.size(); i++) {
+		addresses.push_back(g_Enc.GetString(hosts[i]));
+	}
+}
+
+//! ローカルIPアドレス列を取得
 void SocketRef::GetLocalIPAddress(std::vector<std::string>& addresses, Af af) {
 	jk::Socket::Endpoint ep;
 	std::vector<std::string> hosts, services;
@@ -130,6 +145,21 @@ void SocketRef::GetLocalIPAddress(std::vector<std::string>& addresses, Af af) {
 	}
 }
 
+//! 指定ホスト名、サービス名、ヒントからアドレス情報を取得し保持する
+bool SocketRef::Endpoint::Create(
+	const wchar_t* pszHost, //!< [in,optional] ホスト名、IPv4とIPv6の文字列もいける、サーバーの場合には NULL を指定すると INADDR_ANY (0.0.0.0), IN6ADDR_ANY_INIT (::) 扱いになる、ちなみにUDPのブロードキャストは 192.168.1.255 みたいな感じ
+	const wchar_t* pszService, //!< [in,optional] サービス名(httpなど)または文字列でポート番号
+	const addrinfo* pHint //!< [in,optional] ソケットタイプを決めるヒント情報、ai_addrlen, ai_canonname, ai_addr, ai_next は0にしておくこと
+) {
+	addrinfo* pRet = NULL;
+	if (getaddrinfo(g_Enc.GetBytes(pszHost).c_str(), g_Enc.GetBytes(pszService).c_str(), pHint, &pRet) != 0) {
+		if (pRet != NULL)
+			freeaddrinfo(pRet);
+		return false;
+	}
+	this->Attach(pRet);
+	return true;
+}
 
 //! 指定ホスト名、サービス名、ヒントからアドレス情報を取得し保持する
 bool SocketRef::Endpoint::Create(
@@ -153,6 +183,46 @@ void SocketRef::Endpoint::Delete() {
 		freeaddrinfo(this->pRoot);
 		this->pRoot = NULL;
 	}
+}
+
+//! ホスト名とサービス名を std::vector に取得する
+bool SocketRef::Endpoint::GetNames(
+	std::vector<std::wstring>& hosts, //! [in,out] ホスト名配列が返る
+	std::vector<std::wstring>& services //! [in,out] サービス名配列が返る
+) {
+	bool result = true;
+	char hbuf[NI_MAXHOST];
+	char sbuf[NI_MAXSERV];
+	size_t count = this->AddrInfos.size();
+
+	hosts.resize(count);
+	services.resize(count);
+
+#if defined _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4267)
+#endif
+
+	for (size_t i = 0; i < count; i++) {
+		addrinfo* adrinf = this->AddrInfos[i];
+		if (getnameinfo(
+			(sockaddr*)adrinf->ai_addr,
+			adrinf->ai_addrlen,
+			hbuf, sizeof(hbuf),
+			sbuf, sizeof(sbuf),
+			NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
+				hosts[i] = g_Enc.GetString(hbuf);
+				services[i] = g_Enc.GetString(sbuf);
+		} else {
+			result = false;
+		}
+	}
+
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
+
+	return result;
 }
 
 //! ホスト名とサービス名を std::vector に取得する
@@ -181,8 +251,8 @@ bool SocketRef::Endpoint::GetNames(
 			hbuf, sizeof(hbuf),
 			sbuf, sizeof(sbuf),
 			NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
-			hosts[i] = hbuf;
-			services[i] = sbuf;
+				hosts[i] = hbuf;
+				services[i] = sbuf;
 		} else {
 			result = false;
 		}
@@ -199,8 +269,8 @@ bool SocketRef::Endpoint::GetNames(
 bool SocketRef::GetName(
 	const sockaddr* pAddr, //!< [in] ソケットアドレス
 	socklen_t addrLen, //!< [in] pAddr のサイズ(bytes)
-	std::string* pHost, //!< [out] ノード名が返る
-	std::string* pService //!< [out] サービス名が返る
+	std::string& host, //!< [out] ノード名が返る
+	std::string& service //!< [out] サービス名が返る
 ) {
 	char hbuf[NI_MAXHOST];
 	char sbuf[NI_MAXSERV];
@@ -212,8 +282,8 @@ bool SocketRef::GetName(
 		NI_NUMERICHOST | NI_NUMERICSERV) != 0) {
 		return false;
 	}
-	*pHost = hbuf;
-	*pService = sbuf;
+	host = hbuf;
+	service = sbuf;
 	return true;
 }
 

@@ -39,11 +39,18 @@ public:
 	typedef int Handle; //!< ファイルハンドル型
 #endif
 
+	static ibool Delete(const wchar_t* pszFile); //!< 指定されたファイルを削除する
 	static ibool Delete(const char* pszFile); //!< 指定されたファイルを削除する
+	static ibool Access(const wchar_t* pszFile, uint32_t accessFlags); //!< 指定されたファイルに指定されたアクセス可能か調べる
 	static ibool Access(const char* pszFile, uint32_t accessFlags); //!< 指定されたファイルに指定されたアクセス可能か調べる
+	static ibool Exists(const wchar_t* pszFile); //!< 指定されたファイルが存在しているか調べる
 	static ibool Exists(const char* pszFile); //!< 指定されたファイルが存在しているか調べる
+	static ibool Move(const wchar_t* sourceFileName, const wchar_t* destFileName); //!< 指定されたファイルを新しい場所に移動します
+	static ibool Move(const char* sourceFileName, const char* destFileName); //!< 指定されたファイルを新しい場所に移動します
 
+#if defined __GNUC__
 	static ibool AddFileInfos(const char* pszDir, std::vector<Info>& infos);
+#endif
 
 	//! 有効なファイルハンドルかどうか判定する
 	static _FINLINE ibool IsValidFileHandle(Handle hFile) {
@@ -59,10 +66,13 @@ public:
 	File(); //! コンストラクタ
 	~File(); //! デストラクタ
 
+	ibool Open(const wchar_t* pszFile, uint32_t accessFlags, uint32_t openFlags); //!< ファイルを開く
 	ibool Open(const char* pszFile, uint32_t accessFlags, uint32_t openFlags); //!< ファイルを開く
-	ibool Close(); //! ファイルを閉じる
-	intptr_t Write(const void* pBuf, size_t sizeBytes); // ファイルへ書き込む
-	intptr_t Read(void* pBuf, size_t sizeBytes); // ファイルから読み込む
+	ibool Close(); //!< ファイルを閉じる
+	intptr_t Write(const void* pBuf, size_t sizeBytes); //!< ファイルへ書き込む
+	intptr_t Write(const std::string& str); //!< ファイルへ書き込む
+	intptr_t Read(void* pBuf, size_t sizeBytes); //!< ファイルから読み込む
+	ibool Flush(); //!< メモリー上にあるファイルの内容をストレージデバイス上のものと同期させる
 
 	//! ファイルハンドルの取得
 	Handle GetHandle() {

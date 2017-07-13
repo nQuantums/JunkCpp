@@ -3,10 +3,24 @@
 #include <sstream>
 #include <strstream>
 #include <iomanip>
+#include <memory>
 #include <string.h>
 #include "GlobalSocketLogger.h"
+#include "Encoding.h"
+#include "FilePath.h"
+#include "Directory.h"
+#include "DateTime.h"
+
+#if defined _MSC_VER
+#include <Windows.h>
+#include <stdlib.h>
+#else
+#error gcc version is not implemented.
+#endif
 
 _JUNK_BEGIN
+
+static Encoding g_Enc = Encoding::ASCII();
 
 
 //! 指定サイズまできっちり受信する、指定サイズに満たないで終了するならエラーとなる
@@ -32,32 +46,71 @@ static intptr_t RecvToBytes(SocketRef sock, void* pBuf, intptr_t size) {
 
 static CriticalSection g_CS;
 static Socket g_Socket;
-static std::string g_Host;
+static std::wstring g_Host;
 static int g_Port;
-static std::string g_LocalIpAddress;
+static std::wstring g_LocalIpAddress;
 
 //! まだ接続していなかったら接続してソケットを返す
 static SocketRef GetSocket() {
 	if(g_Socket.IsInvalidHandle()) {
-		g_LocalIpAddress = Socket::GetLocalIPAddress(Socket::Af::IPv4);
+		g_LocalIpAddress = Encoding::ASCII().GetString(Socket::GetLocalIPAddress(Socket::Af::IPv4));
 
-        char port[32];
-		std::strstream ss(port, 30, std::ios::out);
+		std::wstringstream ss;
 		ss << g_Port << std::ends;
 
 		Socket::Endpoint ep;
-		ep.Create(g_Host.c_str(), port, Socket::St::Stream, Socket::Af::IPv4, false);
-		g_Socket.Connect(ep);
+		ep.Create(g_Host.c_str(), ss.str().c_str(), Socket::St::Stream, Socket::Af::IPv4, false);
+		std::vector<std::string> hosts, services;
+		ep.GetNames(hosts, services);
+
+		g_Socket.Create(ep);
+		if(!g_Socket.Connect(ep))
+			return SocketRef();
+
+		g_Socket.SetNoDelay(1);
 	}
 	return g_Socket;
 }
 
 
 //! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
-void GlobalSocketLogger::Startup(const char* pszHost, int port) {
+void GlobalSocketLogger::Startup(const wchar_t* pszHost, int port) {
 	g_Host = pszHost;
 	g_Port = port;
 	Socket::Startup();
+}
+
+//! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
+void GlobalSocketLogger::Startup(const char* pszHost, int port) {
+	g_Host = Encoding::ASCII().GetString(pszHost);
+	g_Port = port;
+	Socket::Startup();
+}
+
+//! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
+void GlobalSocketLogger::Startup(wchar_t* pszIniFile) {
+#if defined _MSC_VER
+	std::wstring iniFilePath = FilePath::Combine(Directory::GetExeDirectory(), pszIniFile);
+	std::wstring address;
+	std::wstring port;
+
+	wchar_t buf[MAX_PATH];
+	DWORD n = ::GetPrivateProfileStringW(L"GlobalSocketLogger", L"ServerAddress", L"127.0.0.1", buf, _countof(buf) - 1, iniFilePath.c_str());
+	buf[n] = L'\0';
+	address = buf;
+	n = ::GetPrivateProfileStringW(L"GlobalSocketLogger", L"ServerPort", L"33777", buf, _countof(buf) - 1, iniFilePath.c_str());
+	buf[n] = L'\0';
+	port = buf;
+
+
+    std::wistringstream iss(port);
+    int portNumber = 0;
+    iss >> portNumber;
+
+	Startup(address.c_str(), portNumber);
+#else
+#error gcc version is not implemented.
+#endif
 }
 
 //! 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
@@ -65,33 +118,68 @@ void GlobalSocketLogger::Cleanup() {
 	Socket::Cleanup();
 }
 
-//! サーバーへログを送る、スレッドセーフ
-void GlobalSocketLogger::Write(const char* pszText) {
+//! サーバーへコマンドパケットを送り応答を取得する
+LogServer::Pkt* GlobalSocketLogger::Command(LogServer::Pkt* pCmd) {
+	// 送って受け取るまでを排他処理とする
 	CriticalSectionLock lock(&g_CS);
 	SocketRef sock = GetSocket();
-	sock.Send(pszText, ::strlen(pszText));
+
+	// とりあえず送る
+	sock.Send(pCmd, pCmd->PacketSize());
+
+	// 応答パケットサイズ受信
+	LogServer::Pkt result;
+	RecvToBytes(sock, &result.Size, sizeof(result.Size));
+
+	// 残りのパケット全体を受信
+	LogServer::Pkt* pResult = LogServer::Pkt::Allocate(result.Size);
+	if(RecvToBytes(sock, &pResult->Command, result.Size) < result.Size) {
+		LogServer::Pkt::Deallocate(pResult);
+		return NULL;
+	}
+
+	return pResult;
+}
+
+//! サーバーへログを送る、スレッドセーフ
+void GlobalSocketLogger::WriteLog(const wchar_t* pszText) {
+	size_t textSize = ::wcslen(pszText) * sizeof(wchar_t);
+	if(textSize == 0)
+		return;
+
+	std::string bytes = g_Enc.GetBytes(pszText);
+	std::auto_ptr<LogServer::Pkt> pCmd(LogServer::Pkt::Allocate(LogServer::CommandEnum::WriteLog, &bytes[0], bytes.size()));
+	std::auto_ptr<LogServer::Pkt> pResult(Command(pCmd.get()));
+}
+
+//! サーバーへログをファイルへフラッシュ要求
+void GlobalSocketLogger::Flush() {
+	LogServer::Pkt cmd;
+	cmd.Size = sizeof(cmd.Command);
+	cmd.Command = LogServer::CommandEnum::Flush;
+	std::auto_ptr<LogServer::Pkt> pResult(Command(&cmd));
 }
 
 
 //==============================================================================
-//		SocketLoggerServer クラス
+//		LogServer クラス
 
 //! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
-void SocketLoggerServer::Startup() {
+void LogServer::Startup() {
 	Socket::Startup();
 }
 
 //! 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
-void SocketLoggerServer::Cleanup() {
+void LogServer::Cleanup() {
 	Socket::Cleanup();
 }
 
-SocketLoggerServer::SocketLoggerServer() {
+LogServer::LogServer() {
 	m_RequestStop = false;
 }
 
 //! 別スレッドでサーバー処理を開始する、スレッドアンセーフ
-ibool SocketLoggerServer::Start(const char* pszLogFolder, int port) {
+ibool LogServer::Start(const wchar_t* pszLogFolder, int port) {
 	jk::Socket sock;
 
 	if(!sock.Create()) {
@@ -119,6 +207,12 @@ ibool SocketLoggerServer::Start(const char* pszLogFolder, int port) {
 		return false;
 	}
 
+	m_LogFolder = pszLogFolder;
+	m_LogFile.Close();
+	if(!m_LogFile.Open(FilePath::Combine(m_LogFolder, L"GlobalSocketLog.csv").c_str(), File::AccessWrite | File::AccessRead, File::OpenAppend | File::OpenCreate)) {
+		return false;
+	}
+
 	m_RequestStop = false;
 	m_RequestStopEvent.Reset();
 	m_AcceptanceSocket.Attach(sock.Detach());
@@ -126,7 +220,7 @@ ibool SocketLoggerServer::Start(const char* pszLogFolder, int port) {
 }
 
 //! サーバー処理スレッドを停止する、スレッドアンセーフ
-void SocketLoggerServer::Stop() {
+void LogServer::Stop() {
 	// まずサーバーの接続受付を停止させる
 	m_RequestStop = true;
 	m_RequestStopEvent.Set();
@@ -146,19 +240,73 @@ void SocketLoggerServer::Stop() {
 }
 
 //! ログファイルへ書き込む
-void SocketLoggerServer::Write(const char* pText) {
-	CriticalSectionLock lock(&m_OStreamCs);
-	m_OStream << pText;
+void LogServer::Write(const char* bytes, size_t size) {
+	CriticalSectionLock lock(&m_LogFileCs);
+	m_LogFile.Write(bytes, size);
+}
+
+//! ログ出力コマンド処理
+void LogServer::CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& remoteName) {
+	std::strstream ss;
+
+	// 日時登録
+	DateTimeValue now = DateTime::Now().Value();
+	ss
+		<< std::setw(4) << std::setfill('0') << now.Year << "/"
+		<< std::setw(2) << std::setfill('0') << now.Month << "/"
+		<< now.Day << " "
+		<< now.Hour << ":"
+		<< now.Minute << ":"
+		<< now.Second << "."
+		<< std::setw(3) << now.Milliseconds;
+
+	// クライアントIPを登録
+	ss << "," << remoteName;
+
+	// テキストを登録
+	ss << "," << std::string(((PktCommandLogWrite*)pCmd)->Text, ((PktCommandLogWrite*)pCmd)->Text + (pCmd->Size - sizeof(pCmd->Command)));
+
+	// 終端も追加
+	ss << std::ends;
+
+	// ファイルへ書き込み
+#if 1700 <= _MSC_VER
+	std::string s = std::move(ss.str());
+#else
+	std::string s = ss.str();
+#endif
+	Write(&s[0], s.size());
+
+	// 応答を返す
+	Pkt result;
+	result.Size = sizeof(result.Result);
+	result.Result = ResultEnum::Ok;
+	sock.Send(&result, result.PacketSize());
+}
+
+//! フラッシュコマンド処理
+void LogServer::CommandFlush(SocketRef sock, Pkt* pCmd) {
+	// フラッシュ
+	{
+		CriticalSectionLock lock(&m_LogFileCs);
+		m_LogFile.Flush();
+	}
+
+	// 応答を返す
+	Pkt result;
+	result.Size = sizeof(result.Result);
+	result.Result = ResultEnum::Ok;
+	sock.Send(&result, result.PacketSize());
 }
 
 //! 接続受付スレッド開始アドレス
-intptr_t SocketLoggerServer::ThreadStart(void* pObj) {
-	((SocketLoggerServer*)pObj)->ThreadProc();
+intptr_t LogServer::ThreadStart(void* pObj) {
+	((LogServer*)pObj)->ThreadProc();
 	return 0;
 }
 
 //! 接続受付スレッド処理
-void SocketLoggerServer::ThreadProc() {
+void LogServer::ThreadProc() {
 	SocketRef sock = m_AcceptanceSocket;
 
 	for(;;) {
@@ -168,30 +316,18 @@ void SocketLoggerServer::ThreadProc() {
 		if(client.IsInvalidHandle())
 			break;
 
-		std::cout << jk::Socket::GetRemoteName(saddr);
-
-		client.SetNoDelay(1);
-
-		char buf[256];
-
-		intptr_t n = client.Recv(buf, sizeof(buf) - 1);
-		if(n <= 0)
-			break;
-
-		buf[n] = '\0';
-		std::cout << buf << std::endl;
+		AddClient(new Client(this, client.Detach(), jk::Socket::GetRemoteName(saddr).c_str()));
 	}
-
 }
 
 //! 指定クライアントを管理下へ追加する
-void SocketLoggerServer::AddClient(Client* pClient) {
+void LogServer::AddClient(Client* pClient) {
 	CriticalSectionLock lock(&m_ClientsCs);
 	m_Clients.push_back(pClient);
 }
 
 //! 指定クライアントを管理下から除外する
-bool SocketLoggerServer::RemoveClient(Client* pClient, bool wait) {
+bool LogServer::RemoveClient(Client* pClient, bool wait) {
 	CriticalSectionLock lock(&m_ClientsCs);
 	for(size_t i = 0; i < m_Clients.size(); i++) {
 		if(m_Clients[i] == pClient) {
@@ -205,10 +341,10 @@ bool SocketLoggerServer::RemoveClient(Client* pClient, bool wait) {
 
 
 //==============================================================================
-//		SocketLoggerServer クラス
+//		LogServer クラス
 
 //! コンストラクタ、クライアント通信スレッドが開始される
-SocketLoggerServer::Client::Client(SocketLoggerServer* pOwner, Socket::Handle hClient, const char* pszRemoteName) {
+LogServer::Client::Client(LogServer* pOwner, Socket::Handle hClient, const char* pszRemoteName) {
 	m_pOwner = pOwner;
 	m_Socket.Attach(hClient);
 	m_RemoteName = pszRemoteName;
@@ -216,16 +352,16 @@ SocketLoggerServer::Client::Client(SocketLoggerServer* pOwner, Socket::Handle hC
 }
 
 //! クライアント通信スレッドを停止する
-void SocketLoggerServer::Client::Stop(bool wait) {
+void LogServer::Client::Stop(bool wait) {
 }
 
-intptr_t SocketLoggerServer::Client::ThreadStart(void* pObj) {
-	((SocketLoggerServer::Client*)pObj)->ThreadProc();
+intptr_t LogServer::Client::ThreadStart(void* pObj) {
+	((LogServer::Client*)pObj)->ThreadProc();
 	return 0;
 }
 
 //! クライアント用通信スレッド処理
-void SocketLoggerServer::Client::ThreadProc() {
+void LogServer::Client::ThreadProc() {
 	SocketRef sock = m_Socket;
 	std::string remoteName = m_RemoteName;
 	std::vector<char> buf(4096);
@@ -236,7 +372,7 @@ void SocketLoggerServer::Client::ThreadProc() {
 
 	// 受信ループ
 	for(;;) {
-		SocketLoggerServer::PktCommandLogWrite* pCmd = (SocketLoggerServer::PktCommandLogWrite*)&buf[0];
+		LogServer::Pkt* pCmd = (LogServer::Pkt*)&buf[0];
 
 		// パケットサイズ受信
 		if(RecvToBytes(sock, &pCmd->Size, sizeof(pCmd->Size)) <= 0)
@@ -250,18 +386,20 @@ void SocketLoggerServer::Client::ThreadProc() {
 		intptr_t requiredSize = pCmd->PacketSize();
 		if((intptr_t)buf.size() < requiredSize) {
 			buf.resize(requiredSize);
-			pCmd = (SocketLoggerServer::PktCommandLogWrite*)&buf[0];
+			pCmd = (LogServer::Pkt*)&buf[0];
 		}
 
 		// コマンドID以降を受信
-		if(RecvToBytes(sock, &pCmd->Command, sizeof(pCmd->Size)) <= 0)
+		if(RecvToBytes(sock, &pCmd->Command, pCmd->Size) <= 0)
 			break;
 
 		// コマンド別処理
 		switch(pCmd->Command) {
-		case SocketLoggerServer::CommandEnum::LogWrite:
+		case LogServer::CommandEnum::WriteLog:
+			m_pOwner->CommandWriteLog(sock, pCmd, remoteName);
 			break;
-		case SocketLoggerServer::CommandEnum::Flush:
+		case LogServer::CommandEnum::Flush:
+			m_pOwner->CommandFlush(sock, pCmd);
 			break;
 		}
 

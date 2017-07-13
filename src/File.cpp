@@ -30,8 +30,24 @@
 _JUNK_BEGIN
 
 //! 指定されたファイルを削除する
-ibool File::Delete(const char* pszFile //!< [in] ファイル名
-		) {
+ibool File::Delete(
+	const wchar_t* pszFile //!< [in] ファイル名
+) {
+#if defined _MSC_VER
+	if (_wremove(pszFile) != 0) {
+		Error::SetLastErrorFromErrno();
+		return false;
+	}
+#else
+#error gcc version is not implemented.
+#endif
+	return true;
+}
+
+//! 指定されたファイルを削除する
+ibool File::Delete(
+	const char* pszFile //!< [in] ファイル名
+) {
 	if (remove(pszFile) != 0) {
 		Error::SetLastErrorFromErrno();
 		return false;
@@ -40,9 +56,25 @@ ibool File::Delete(const char* pszFile //!< [in] ファイル名
 }
 
 //! 指定されたファイルに指定されたアクセス可能か調べる
-ibool File::Access(const char* pszFile, //!< [in] ファイルパス名
-		uint32_t accessFlags //!< [in] File::Access* のフラグの組み合わせ
-		) {
+ibool File::Access(
+	const wchar_t* pszFile, //!< [in] ファイルパス名
+	uint32_t accessFlags //!< [in] File::Access* のフラグの組み合わせ
+) {
+#if defined _MSC_VER
+	int f = 0;
+	if (accessFlags & AccessRead) f |= 4;
+	if (accessFlags & AccessWrite) f |= 2;
+	return _waccess_s(pszFile, f) == 0;
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! 指定されたファイルに指定されたアクセス可能か調べる
+ibool File::Access(
+	const char* pszFile, //!< [in] ファイルパス名
+	uint32_t accessFlags //!< [in] File::Access* のフラグの組み合わせ
+) {
 #if defined __GNUC__
 	int f = 0;
 	if (accessFlags & AccessRead)
@@ -59,8 +91,21 @@ ibool File::Access(const char* pszFile, //!< [in] ファイルパス名
 }
 
 //! 指定されたファイルが存在しているか調べる
-ibool File::Exists(const char* pszFile //!< [in] ファイル名
-		) {
+ibool File::Exists(
+	const wchar_t* pszFile //!< [in] ファイル名
+) {
+#if defined _MSC_VER
+	struct _stat64 st;
+	return _wstat64(pszFile, &st) == 0;
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! 指定されたファイルが存在しているか調べる
+ibool File::Exists(
+	const char* pszFile //!< [in] ファイル名
+) {
 #if defined __GNUC__
 	// ファイルサイズ取得
 	struct stat st;
@@ -71,6 +116,32 @@ ibool File::Exists(const char* pszFile //!< [in] ファイル名
 #endif
 }
 
+//! 指定されたファイルを新しい場所に移動します
+ibool File::Move(
+	const wchar_t* sourceFileName, //!< [in] 移動するファイルの名前
+	const wchar_t* destFileName //!< [in] ファイルの新しいパスおよび名前
+) {
+#if defined _MSC_VER
+	if(_wrename(sourceFileName, destFileName) != 0) {
+		Error::SetLastErrorFromErrno();
+		return false;
+	}
+#else
+#error gcc version is not implemented.
+#endif
+	return true;
+}
+
+//! 指定されたファイルを新しい場所に移動します
+ibool File::Move(const char* sourceFileName, const char* destFileName) {
+	if(rename(sourceFileName, destFileName) != 0) {
+		Error::SetLastErrorFromErrno();
+		return false;
+	}
+	return true;
+}
+
+#if defined __GNUC__
 ibool File::AddFileInfos(const char* pszDir, std::vector<Info>& infos) {
 #if defined __GNUC__
 	DIR* dir = opendir(pszDir);
@@ -118,7 +189,7 @@ ibool File::AddFileInfos(const char* pszDir, std::vector<Info>& infos) {
 
 	return true;
 }
-
+#endif
 
 //! コンストラクタ
 File::File() {
@@ -131,10 +202,45 @@ File::~File() {
 }
 
 //! ファイルを開く
-ibool File::Open(const char* pszFile, //!< [in] ファイル名
-		uint32_t accessFlags, //!< [in] File::Access* のフラグの組み合わせ
-		uint32_t openFlags //!< [in] File::Open* のフラグ組み合わせ
-		) {
+ibool File::Open(
+	const wchar_t* pszFile, //!< [in] ファイル名
+	uint32_t accessFlags, //!< [in] File::Access* のフラグの組み合わせ
+	uint32_t openFlags //!< [in] File::Open* のフラグ組み合わせ
+) {
+#if defined _MSC_VER
+	int oflag = _O_BINARY;
+	int shflag = _SH_DENYWR;
+	int pmode = _S_IREAD | _S_IWRITE;
+
+	if ((accessFlags & AccessWrite) && (accessFlags & AccessRead)) {
+		oflag |= _O_RDWR;
+	} else if (accessFlags & AccessWrite) {
+		oflag |= _O_WRONLY;
+	} else if (accessFlags & AccessRead) {
+		oflag |= _O_RDONLY;
+	}
+
+	if (openFlags & OpenCreate) oflag |= _O_CREAT | _O_TRUNC;
+	if (openFlags & OpenNew) oflag |= _O_EXCL;
+	if (openFlags & OpenAppend) oflag |= _O_APPEND;
+
+	if (_wsopen_s(&m_hFile, pszFile, oflag, shflag, pmode) != 0) {
+		Error::SetLastErrorFromErrno();
+		return false;
+	}
+
+	return true;
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! ファイルを開く
+ibool File::Open(
+	const char* pszFile, //!< [in] ファイル名
+	uint32_t accessFlags, //!< [in] File::Access* のフラグの組み合わせ
+	uint32_t openFlags //!< [in] File::Open* のフラグ組み合わせ
+) {
 #if defined __GNUC__
 	int oflag = 0;
 	int pmode = S_IRWXU | S_IWGRP | S_IROTH;
@@ -148,7 +254,7 @@ ibool File::Open(const char* pszFile, //!< [in] ファイル名
 	}
 
 	if (openFlags & OpenCreate)
-		oflag |= O_CREAT;
+		oflag |= O_CREAT | O_TRUNC;
 	if (openFlags & OpenAppend)
 		oflag |= O_APPEND;
 
@@ -172,7 +278,7 @@ ibool File::Open(const char* pszFile, //!< [in] ファイル名
 		oflag |= _O_RDONLY;
 	}
 
-	if (openFlags & OpenCreate) oflag |= _O_CREAT;
+	if (openFlags & OpenCreate) oflag |= _O_CREAT | _O_TRUNC;
 	if (openFlags & OpenNew) oflag |= _O_EXCL;
 	if (openFlags & OpenAppend) oflag |= _O_APPEND;
 
@@ -225,6 +331,16 @@ intptr_t File::Write(
 #endif
 }
 
+//! ファイルへ書き込む
+intptr_t File::Write(
+	const std::string& str //!< [in] 書き込むバイト配列
+) {
+	if(str.empty())
+		return 0;
+	return Write(&str[0], str.size());
+}
+
+
 //! ファイルから読み込む
 //! @retval 書き込まれたバイト数が返る、失敗したら負数が返る
 intptr_t File::Read(
@@ -236,6 +352,22 @@ intptr_t File::Read(
 #elif defined _MSC_VER
 	return _read(m_hFile, pBuf, sizeBytes);
 #endif
+}
+
+//!　メモリー上にあるファイルの内容をストレージデバイス上のものと同期させる
+ibool File::Flush() {
+#if defined _MSC_VER
+	if(_commit(m_hFile) != 0) {
+		Error::SetLastErrorFromErrno();
+		return false;
+	}
+#else
+	if(fsync(m_hFile) != 0) {
+		Error::SetLastErrorFromErrno();
+		return false;
+	}
+#endif
+	return true;
 }
 
 _JUNK_END

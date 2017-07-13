@@ -83,13 +83,35 @@ struct SocketRef {
 		}
 
 		//! 指定ホスト名、サービス名、ヒントからアドレス情報を取得し保持する
+		bool Create(const wchar_t* pszHost, const wchar_t* pszService, const addrinfo* pHint);
+
+		//! 指定ホスト名、サービス名、ヒントからアドレス情報を取得し保持する
 		bool Create(const char* pszHost, const char* pszService, const addrinfo* pHint);
 
 		//! 確保したメモリを破棄する
 		void Delete();
 
 		//! ホスト名とサービス名を std::vector に取得する
+		bool GetNames(std::vector<std::wstring>& hosts, std::vector<std::wstring>& services);
+
+		//! ホスト名とサービス名を std::vector に取得する
 		bool GetNames(std::vector<std::string>& hosts, std::vector<std::string>& services);
+
+		//! 指定ホスト名、サービス名、ヒントからアドレス情報を取得し保持する
+		bool Create(
+			const wchar_t* pszHost, //!< [in,optional] ホスト名、IPv4とIPv6の文字列もいける、サーバーの場合には NULL を指定すると INADDR_ANY (0.0.0.0), IN6ADDR_ANY_INIT (::) 扱いになる、ちなみにUDPのブロードキャストは 192.168.1.255 みたいな感じ
+			const wchar_t* pszService, //!< [in,optional] サービス名(httpなど)またはポート番号
+			St sockType, //!< [in] ソケットタイプ
+			Af family, //!< [in] アドレスファミリ
+			bool toBind = true //!< [in] bind() する際に true を指定する
+		) {
+			struct addrinfo hints;
+			memset(&hints, 0, sizeof(hints));
+			hints.ai_socktype = (int)sockType;
+			hints.ai_family = (int)family;
+			hints.ai_flags = toBind ? AI_PASSIVE : 0;
+			return Create(pszHost, pszService, &hints);
+		}
 
 		//! 指定ホスト名、サービス名、ヒントからアドレス情報を取得し保持する
 		bool Create(
@@ -248,6 +270,9 @@ struct SocketRef {
 	static std::string GetLocalIPAddress(Af af = Af::IPv4);
 
 	//! ローカルIPアドレス列を取得
+	static void GetLocalIPAddress(std::vector<std::wstring>& addresses, Af af = Af::IPv4);
+
+	//! ローカルIPアドレス列を取得
 	static void GetLocalIPAddress(std::vector<std::string>& addresses, Af af = Af::IPv4);
 
 
@@ -378,7 +403,7 @@ struct SocketRef {
 	}
 
 	//! ソケットアドレスから名前情報を取得する
-	static bool GetName(const sockaddr* pAddr, socklen_t addrLen, std::string* pHost, std::string* pService);
+	static bool GetName(const sockaddr* pAddr, socklen_t addrLen, std::string& host, std::string& service);
 
 	//! ソケットから読み込み
 	_FINLINE intptr_t Recv(void* pBuf, size_t size) {

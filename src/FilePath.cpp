@@ -72,4 +72,63 @@ ibool FilePath::StripPath(
 #endif
 }
 
+//! 2つの文字列を1つのパスに結合する
+std::wstring FilePath::Combine(const std::wstring& path1, const std::wstring& path2) {
+#if defined _MSC_VER
+	wchar_t buf[MAX_PATH] = L"";
+	::PathCombineW(buf, path1.c_str(), path2.c_str());
+	return buf;
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! 指定されたパス名のディレクトリ名部分を取得する
+std::wstring FilePath::GetDirectoryName(const std::wstring& path) {
+#if defined _MSC_VER
+	wchar_t drive[MAX_PATH] = L"";
+	wchar_t dir[MAX_PATH] = L"";
+	_wsplitpath_s(path.c_str(), drive, MAX_PATH, dir, MAX_PATH, NULL, 0, NULL, 0);
+#if 1700 <= _MSC_VER
+	return std::move(std::wstring(drive) + dir);
+#else
+	return std::wstring(drive) + dir;
+#endif
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! 指定したパス文字列のファイル名と拡張子を取得する
+std::wstring FilePath::GetFileName(const std::wstring& path) {
+#if defined _MSC_VER
+	wchar_t filename[MAX_PATH] = L"";
+	wchar_t ext[MAX_PATH] = L"";
+	_wsplitpath_s(path.c_str(), NULL, 0, NULL, 0, filename, MAX_PATH, ext, MAX_PATH);
+#if 1700 <= _MSC_VER
+	return std::move(std::wstring(filename) + ext);
+#else
+	return std::wstring(filename) + ext;
+#endif
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! 指定したパス文字列の拡張子を取得する
+std::wstring FilePath::GetExtension(const std::wstring& path) {
+#if defined _MSC_VER
+	wchar_t ext[MAX_PATH] = L"";
+	_wsplitpath_s(path.c_str(), NULL, 0, NULL, 0, NULL, 0, ext, MAX_PATH);
+#if 1700 <= _MSC_VER
+	return std::move(std::wstring(ext));
+#else
+	return std::wstring(ext);
+#endif
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+
 _JUNK_END

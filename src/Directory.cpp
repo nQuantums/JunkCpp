@@ -1,5 +1,6 @@
 ﻿#include "Directory.h"
 #include "Error.h"
+#include "FilePath.h"
 
 #if defined __GNUC__
 
@@ -40,6 +41,22 @@ ibool Directory::GetCurrent(
 
 //!< 指定されたディレクトリが存在しているか調べる
 ibool Directory::Exists(
+	const wchar_t* pszDir // [in] ディレクトリパス名
+) {
+#if defined __GNUC__
+#error gcc version is not implemented.
+#elif defined  _WIN32
+	DWORD dwAttrib = ::GetFileAttributesW(pszDir);
+	if(dwAttrib == INVALID_FILE_ATTRIBUTES) {
+		Error::SetLastErrorFromWinErr();
+		return false;
+	}
+	return (dwAttrib != INVALID_FILE_ATTRIBUTES &&  (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+#endif
+}
+
+//!< 指定されたディレクトリが存在しているか調べる
+ibool Directory::Exists(
 	const char* pszDir // [in] ディレクトリパス名
 ) {
 #if defined __GNUC__
@@ -56,6 +73,22 @@ ibool Directory::Exists(
 
 //! 指定されたディレクトリを作成する
 ibool Directory::Create(
+	const wchar_t* pszDir // [in] ディレクトリパス名
+) {
+#if defined __GNUC__
+#error gcc version is not implemented.
+#elif defined  _WIN32
+	if(!::CreateDirectoryW(pszDir, NULL)) {
+		Error::SetLastErrorFromWinErr();
+		return false;
+	}
+	return true;
+#endif
+}
+
+
+//! 指定されたディレクトリを作成する
+ibool Directory::Create(
 	const char* pszDir // [in] ディレクトリパス名
 ) {
 #if defined __GNUC__
@@ -66,6 +99,39 @@ ibool Directory::Create(
 		return false;
 	}
 	return true;
+#endif
+}
+
+//! カレントディレクトリを取得する
+std::wstring Directory::GetCurrent() {
+#if defined _MSC_VER
+	wchar_t path[MAX_PATH];
+	if (!::GetCurrentDirectoryW(MAX_PATH, path)) {
+		Error::SetLastErrorFromWinErr();
+		return false;
+	}
+#if 1700 <= _MSC_VER
+	return std::move(std::wstring(path));
+#else
+	return path;
+#endif
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! 実行中EXEの置かれているディレクトリパス名を取得する
+std::wstring Directory::GetExeDirectory() {
+#if defined _MSC_VER
+	wchar_t path[MAX_PATH] = L"";
+	::GetModuleFileNameW(NULL, path, MAX_PATH);
+#if 1700 <= _MSC_VER
+	return std::move(FilePath::GetDirectoryName(path));
+#else
+	return FilePath::GetDirectoryName(path);
+#endif
+#else
+#error gcc version is not implemented.
 #endif
 }
 
