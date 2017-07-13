@@ -27,7 +27,6 @@ static intptr_t RecvToBytes(SocketRef sock, void* pBuf, intptr_t size) {
 }
 
 
-
 //==============================================================================
 //		GlobalSocketLogger クラス
 

@@ -48,7 +48,7 @@ struct ThreadLocalStorage {
 //! スレッドローカルストレージ
 template<class T>
 struct ThreadLocalStorage {
-	T Value; //!< TLSのキー
+	T Value; //!< スレッド毎にインスタンス化される値
 
 	//! TLSに保存されているオブジェクトの取得
 	_FINLINE T& Get() {
@@ -56,7 +56,12 @@ struct ThreadLocalStorage {
 	}
 };
 
+#if _MSC_VER <= 1700
+#define JUNK_TLS(type) __declspec(thread) jk::ThreadLocalStorage<type>
+#else
 #define JUNK_TLS(type) thread_local jk::ThreadLocalStorage<type>
+#endif
+
 #endif
 
 _JUNK_END

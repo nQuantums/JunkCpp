@@ -18,7 +18,7 @@ void Error::SetLastError(
 ) {
 	va_list args;
 	va_start(args, pszFmt);
-	auto& tls = s_tls.Get();
+	Error::LocalStorage& tls = s_tls.Get();
 	size_t bufSize = sizeof(tls.LastErrorStringBuffer);
 #if defined __GNUC__
 	vsnprintf(tls.LastErrorStringBuffer, bufSize - 1, pszFmt, args);
@@ -32,7 +32,7 @@ void Error::SetLastError(
 void Error::SetLastErrorFromErrno(
 	int en //!< [in] errno と同じ形式のエラーコード
 ) {
-	auto& tls = s_tls.Get();
+	Error::LocalStorage& tls = s_tls.Get();
 	char* p = tls.LastErrorStringBuffer;
 #ifdef _MSC_VER
 	strerror_s(p, sizeof(tls.LastErrorStringBuffer) - 1, en);
@@ -54,8 +54,8 @@ void Error::SetLastErrorFromErrno() {
 void Error::SetLastErrorFromWinErr(
 	DWORD lastError //!< [in] ::GetLastError() と同じ形式のエラーコード
 ) {
-	auto& tls = s_tls.Get();
-	auto n = ::FormatMessageA(
+	Error::LocalStorage& tls = s_tls.Get();
+	DWORD n = ::FormatMessageA(
 		FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
 		NULL,
 		lastError,
@@ -75,7 +75,7 @@ void Error::SetLastErrorFromWinErr() {
 #endif
 
 //! スレッド毎の最終エラー文字列を取得する
-const char* Error::GetLastError() {
+const char* Error::GetLastErrorString() {
 	return s_tls.Get().LastErrorStringBuffer;
 }
 

@@ -36,7 +36,7 @@ public:
 
 
 
-	static const char* GetLastError(); //!< スレッド毎の最終エラー文字列を取得する
+	static const char* GetLastErrorString(); //!< スレッド毎の最終エラー文字列を取得する
 
 	//! Android+NDK だと __thread が使えないため自分で作成
 	struct LocalStorage {
