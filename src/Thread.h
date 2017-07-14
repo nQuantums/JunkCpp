@@ -148,8 +148,12 @@ public:
 	}
 
 	//! コンストラクタで指定された同期オブジェクトを切り離す、デストラクタでアンロックされなくなる
-	void Detach() {
-		pSync = NULL;
+	void Detach(bool unlock = false) {
+		if (pSync != NULL) {
+			if (unlock)
+				pSync->Unlock();
+			pSync = NULL;
+		}
 	}
 
 protected:

@@ -39,6 +39,21 @@ struct DateTime {
 		return dt;
 	}
 
+	DateTime() {
+	}
+
+	DateTime(uint16_t year, uint16_t month = 0, uint16_t day = 0, uint16_t hour = 0, uint16_t minute = 0, uint16_t second = 0, uint16_t msecond = 0) {
+		SYSTEMTIME st;
+		st.wYear = year;
+		st.wMonth = month;
+		st.wDay = day;
+		st.wHour = hour;
+		st.wMinute = minute;
+		st.wSecond = second;
+		st.wMilliseconds = msecond;
+		::SystemTimeToFileTime(&st, (FILETIME*)&this->Tick);
+	}
+
 	//! 年月日時分秒とミリ秒を取得する
 	DateTimeValue Value() const {
 		SYSTEMTIME st;

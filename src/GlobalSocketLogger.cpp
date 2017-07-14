@@ -180,6 +180,16 @@ LogServer::LogServer() {
 
 //! 別スレッドでサーバー処理を開始する、スレッドアンセーフ
 ibool LogServer::Start(const wchar_t* pszLogFolder, int port) {
+	m_LogFolder = pszLogFolder;
+	m_LogFile.Close();
+
+	if (!Directory::Exists(m_LogFolder.c_str())) {
+		if (!Directory::Create(m_LogFolder.c_str())) {
+			return false;
+		}
+	}
+
+
 	jk::Socket sock;
 
 	if(!sock.Create()) {
@@ -207,8 +217,6 @@ ibool LogServer::Start(const wchar_t* pszLogFolder, int port) {
 		return false;
 	}
 
-	m_LogFolder = pszLogFolder;
-	m_LogFile.Close();
 	if(!m_LogFile.Open(FilePath::Combine(m_LogFolder, L"GlobalSocketLog.csv").c_str(), File::AccessWrite | File::AccessRead, File::OpenAppend | File::OpenCreate)) {
 		return false;
 	}
@@ -331,8 +339,9 @@ bool LogServer::RemoveClient(Client* pClient, bool wait) {
 	CriticalSectionLock lock(&m_ClientsCs);
 	for(size_t i = 0; i < m_Clients.size(); i++) {
 		if(m_Clients[i] == pClient) {
-			pClient->Stop(wait);
 			m_Clients.erase(m_Clients.begin() + i);
+			lock.Detach(true);
+			pClient->Stop(wait);
 			return true;
 		}
 	}
@@ -341,7 +350,7 @@ bool LogServer::RemoveClient(Client* pClient, bool wait) {
 
 
 //==============================================================================
-//		LogServer クラス
+//		LogServer::Client クラス
 
 //! コンストラクタ、クライアント通信スレッドが開始される
 LogServer::Client::Client(LogServer* pOwner, Socket::Handle hClient, const char* pszRemoteName) {
