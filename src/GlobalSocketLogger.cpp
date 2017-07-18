@@ -60,7 +60,7 @@ static SocketRef GetSocket() {
 		g_LocalIpAddress = Encoding::ASCII().GetString(Socket::GetLocalIPAddress(Socket::Af::IPv4));
 
 		std::wstringstream ss;
-		ss << g_Port << std::ends;
+		ss << g_Port;
 
 		Socket::Endpoint ep;
 		ep.Create(g_Host.c_str(), ss.str().c_str(), Socket::St::Stream, Socket::Af::IPv4, false);
@@ -166,6 +166,14 @@ void GlobalSocketLogger::Flush() {
 	std::auto_ptr<LogServer::Pkt> pResult(Command(&cmd));
 }
 
+//! サーバーへ現在のログファイルを閉じる要求
+void GlobalSocketLogger::FileClose() {
+	LogServer::Pkt cmd;
+	cmd.Size = sizeof(cmd.Command);
+	cmd.Command = LogServer::CommandEnum::FileClose;
+	std::auto_ptr<LogServer::Pkt> pResult(Command(&cmd));
+}
+
 //! 現在のスレッドの呼び出し深度の取得
 intptr_t GlobalSocketLogger::GetDepth() {
 	return g_Depth.Get();
@@ -206,6 +214,7 @@ ibool LogServer::Start(const wchar_t* pszLogFolder, int port) {
 
 	if (!Directory::Exists(m_LogFolder.c_str())) {
 		if (!Directory::Create(m_LogFolder.c_str())) {
+			std::cerr << "Failed to create directory." << std::endl;
 			return false;
 		}
 	}
@@ -235,10 +244,6 @@ ibool LogServer::Start(const wchar_t* pszLogFolder, int port) {
 
 	if(!sock.Listen(10)) {
 		std::cerr << "Failed to listen." << std::endl;
-		return false;
-	}
-
-	if(!m_LogFile.Open(FilePath::Combine(m_LogFolder, L"GlobalSocketLog.csv").c_str(), File::AccessWrite | File::AccessRead, File::OpenAppend | File::OpenCreate)) {
 		return false;
 	}
 
@@ -273,22 +278,66 @@ void LogServer::Stop() {
 //! ログファイルへ書き込む
 void LogServer::Write(const char* bytes, size_t size) {
 	CriticalSectionLock lock(&m_LogFileCs);
+	if (m_LogFile.IsInvalidHandle()) {
+		std::wstringstream ss;
+
+		// 必要なら年月ディレクトリ作成
+		DateTimeValue now = DateTime::Now().Value();
+		ss << std::setfill(L'0');
+
+		ss
+			<< std::setw(4) << now.Year
+			<< std::setw(2) << now.Month;
+
+		std::wstring dir = FilePath::Combine(m_LogFolder, ss.str());
+		if (!Directory::Exists(dir.c_str())) {
+			if (!Directory::Create(dir.c_str())) {
+				std::cerr << "Failed to create directory." << std::endl;
+				return;
+			}
+		}
+
+		// ファイル作成
+		ss.str(L"");
+		ss.clear(std::wstringstream::goodbit);
+		ss
+			<< std::setw(4) << now.Year
+			<< std::setw(2) << now.Month
+			<< std::setw(2) << now.Day
+			<< std::setw(2) << now.Hour
+			<< std::setw(2) << now.Minute
+			<< std::setw(2) << now.Second
+			<< std::setw(3) << now.Milliseconds
+			<< L".csv";
+
+#if 1700 <= _MSC_VER
+		dir = std::move(FilePath::Combine(dir, ss.str().c_str()));
+#else
+		dir = FilePath::Combine(dir, ss.str().c_str());
+#endif
+
+		if (!m_LogFile.Open(dir.c_str(), File::AccessWrite | File::AccessRead, File::OpenAppend | File::OpenCreate)) {
+			std::cerr << "Failed to create log file." << std::endl;
+			return;
+		}
+	}
 	m_LogFile.Write(bytes, size);
 }
 
 //! ログ出力コマンド処理
 void LogServer::CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& remoteName) {
-	std::strstream ss;
+	std::stringstream ss;
 
 	// 日時登録
 	DateTimeValue now = DateTime::Now().Value();
+	ss << std::setfill('0');
 	ss
-		<< std::setw(4) << std::setfill('0') << now.Year << "/"
-		<< std::setw(2) << std::setfill('0') << now.Month << "/"
-		<< now.Day << " "
-		<< now.Hour << ":"
-		<< now.Minute << ":"
-		<< now.Second << "."
+		<< std::setw(4) << now.Year << "/"
+		<< std::setw(2) << now.Month << "/"
+		<< std::setw(2) << now.Day << " "
+		<< std::setw(2) << now.Hour << ":"
+		<< std::setw(2) << now.Minute << ":"
+		<< std::setw(2) << now.Second << "."
 		<< std::setw(3) << now.Milliseconds;
 
 	// クライアントIPを登録
@@ -296,9 +345,6 @@ void LogServer::CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& re
 
 	// テキストを登録
 	ss << std::string(((PktCommandLogWrite*)pCmd)->Text, ((PktCommandLogWrite*)pCmd)->Text + (pCmd->Size - sizeof(pCmd->Command)));
-
-	// 終端も追加
-	ss << std::ends;
 
 	// ファイルへ書き込み
 #if 1700 <= _MSC_VER
@@ -320,7 +366,23 @@ void LogServer::CommandFlush(SocketRef sock, Pkt* pCmd) {
 	// フラッシュ
 	{
 		CriticalSectionLock lock(&m_LogFileCs);
-		m_LogFile.Flush();
+		if (!m_LogFile.IsInvalidHandle())
+			m_LogFile.Flush();
+	}
+
+	// 応答を返す
+	Pkt result;
+	result.Size = sizeof(result.Result);
+	result.Result = ResultEnum::Ok;
+	sock.Send(&result, result.PacketSize());
+}
+
+//! 現在のログファイルを閉じる
+void LogServer::CommandFileClose(SocketRef sock, Pkt* pCmd) {
+	// ファイル閉じる
+	{
+		CriticalSectionLock lock(&m_LogFileCs);
+		m_LogFile.Close();
 	}
 
 	// 応答を返す
@@ -436,6 +498,9 @@ void LogServer::Client::ThreadProc() {
 		case LogServer::CommandEnum::Flush:
 			m_pOwner->CommandFlush(sock, pCmd);
 			break;
+		case LogServer::CommandEnum::FileClose:
+			m_pOwner->CommandFileClose(sock, pCmd);
+			break;
 		}
 	}
 
@@ -469,8 +534,6 @@ GlobalSocketLogger::Frame::Frame(const wchar_t* pszFrameName, const wchar_t* psz
 	// フレーム名と引数追加
 	ss << L"\"+: " << this->FrameName << L"(" << (pszArgs != NULL ? pszArgs : L"") << L")\"\n";
 
-	ss << std::ends;
-
 	// ログをサーバーへ送る
 	WriteLog(ss.str().c_str());
 #else
@@ -488,8 +551,6 @@ GlobalSocketLogger::Frame::~Frame() {
 	ss << JUNKLOG_DELIMITER << GetDepth() << JUNKLOG_DELIMITER;
 	// フレーム名と所要時間追加
 	ss << L"\"-: " << this->FrameName << JUNKLOG_DELIMITER << (Clock::SysNS() - this->EnterTime) / 1000000 << L"ms\"\n";
-
-	ss << std::ends;
 
 	// ログをサーバーへ送る
 	WriteLog(ss.str().c_str());

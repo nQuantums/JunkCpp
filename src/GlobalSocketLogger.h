@@ -25,6 +25,7 @@ public:
 		Unknown = 0,
 		WriteLog,
 		Flush,
+		FileClose,
 	};
 
 	//! サーバーからの応答ID
@@ -85,6 +86,7 @@ public:
 	void Write(const char* bytes, size_t size); //!< ログファイルへ書き込む
 	void CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& remoteName); //!< ログ出力コマンド処理
 	void CommandFlush(SocketRef sock, Pkt* pCmd); //!< フラッシュコマンド処理
+	void CommandFileClose(SocketRef sock, Pkt* pCmd); //!< 現在のログファイルを閉じる
 
 private:
 	//! クライアント毎の処理
@@ -133,7 +135,8 @@ public:
     static void Cleanup(); //!< 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
 	static LogServer::Pkt* Command(LogServer::Pkt* pCmd); //!< サーバーへコマンドパケットを送り応答を取得する、スレッドセーフ
     static void WriteLog(const wchar_t* pszText); //!< サーバーへログを送る、スレッドセーフ
-    static void Flush(); //!< サーバーへログをファイルへフラッシュ要求
+	static void Flush(); //!< サーバーへログをファイルへフラッシュ要求
+	static void FileClose(); //!< サーバーへ現在のログファイルを閉じる要求
 	static intptr_t GetDepth(); //!< 現在のスレッドの呼び出し深度の取得
 	static intptr_t IncrementDepth(); //!< 現在のスレッドの呼び出し深度をインクリメント
 	static intptr_t DecrementDepth(); //!< 現在のスレッドの呼び出し深度をデクリメント

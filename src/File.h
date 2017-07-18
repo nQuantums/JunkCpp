@@ -54,7 +54,7 @@ public:
 
 	//! 有効なファイルハンドルかどうか判定する
 	static _FINLINE ibool IsValidFileHandle(Handle hFile) {
-		return hFile == 0;
+		return hFile != InvalidHandle();
 	}
 
 	//! 無効なファイルハンドル値の取得
@@ -77,6 +77,11 @@ public:
 	//! ファイルハンドルの取得
 	Handle GetHandle() {
 		return m_hFile;
+	}
+
+	//! 自分に無効ハンドルが設定されているかどうか
+	_FINLINE bool IsInvalidHandle() const {
+		return m_hFile == InvalidHandle();
 	}
 
 protected:
