@@ -27,7 +27,7 @@ int64_t Clock::SysNS() {
 #elif defined  _WIN32
 	LARGE_INTEGER li;
 	::QueryPerformanceCounter(&li);
-	return INT64_C(1000000000) * li.QuadPart / Qpf;
+	return 1000000000LL * li.QuadPart / Qpf;
 #endif
 }
 

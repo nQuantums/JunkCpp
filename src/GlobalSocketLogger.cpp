@@ -10,6 +10,9 @@
 #include "FilePath.h"
 #include "Directory.h"
 #include "DateTime.h"
+#include "Str.h"
+#include "Clock.h"
+#include "ThreadLocalStorage.h"
 
 #if defined _MSC_VER
 #include <Windows.h>
@@ -49,6 +52,7 @@ static Socket g_Socket;
 static std::wstring g_Host;
 static int g_Port;
 static std::wstring g_LocalIpAddress;
+static JUNK_TLS(intptr_t) g_Depth;
 
 //! まだ接続していなかったら接続してソケットを返す
 static SocketRef GetSocket() {
@@ -64,8 +68,10 @@ static SocketRef GetSocket() {
 		ep.GetNames(hosts, services);
 
 		g_Socket.Create(ep);
-		if(!g_Socket.Connect(ep))
+		if(!g_Socket.Connect(ep)) {
+			std::cerr << "Failed to connect to server." << std::endl;
 			return SocketRef();
+		}
 
 		g_Socket.SetNoDelay(1);
 	}
@@ -160,6 +166,21 @@ void GlobalSocketLogger::Flush() {
 	std::auto_ptr<LogServer::Pkt> pResult(Command(&cmd));
 }
 
+//! 現在のスレッドの呼び出し深度の取得
+intptr_t GlobalSocketLogger::GetDepth() {
+	return g_Depth.Get();
+}
+
+//! 現在のスレッドの呼び出し深度をインクリメント
+intptr_t GlobalSocketLogger::IncrementDepth() {
+	return g_Depth.Get()++;
+}
+
+//! 現在のスレッドの呼び出し深度をデクリメント
+intptr_t GlobalSocketLogger::DecrementDepth() {
+	return g_Depth.Get()--;
+}
+
 
 //==============================================================================
 //		LogServer クラス
@@ -180,7 +201,7 @@ LogServer::LogServer() {
 
 //! 別スレッドでサーバー処理を開始する、スレッドアンセーフ
 ibool LogServer::Start(const wchar_t* pszLogFolder, int port) {
-	m_LogFolder = pszLogFolder;
+	m_LogFolder = FilePath::Combine(Directory::GetExeDirectory(), pszLogFolder);
 	m_LogFile.Close();
 
 	if (!Directory::Exists(m_LogFolder.c_str())) {
@@ -232,6 +253,8 @@ void LogServer::Stop() {
 	// まずサーバーの接続受付を停止させる
 	m_RequestStop = true;
 	m_RequestStopEvent.Set();
+	m_AcceptanceSocket.Shutdown(Socket::Sd::Both);
+	m_AcceptanceSocket.Close();
 	m_AcceptanceThread.Join();
 
 	// 全クライアントの通信スレッドを停止する
@@ -243,7 +266,7 @@ void LogServer::Stop() {
 	}
 
 	for(size_t i = 0; i < clients.size(); i++) {
-		RemoveClient(clients[i]);
+		RemoveClient(clients[i], true);
 	}
 }
 
@@ -269,10 +292,10 @@ void LogServer::CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& re
 		<< std::setw(3) << now.Milliseconds;
 
 	// クライアントIPを登録
-	ss << "," << remoteName;
+	ss << ",Ip" << remoteName;
 
 	// テキストを登録
-	ss << "," << std::string(((PktCommandLogWrite*)pCmd)->Text, ((PktCommandLogWrite*)pCmd)->Text + (pCmd->Size - sizeof(pCmd->Command)));
+	ss << std::string(((PktCommandLogWrite*)pCmd)->Text, ((PktCommandLogWrite*)pCmd)->Text + (pCmd->Size - sizeof(pCmd->Command)));
 
 	// 終端も追加
 	ss << std::ends;
@@ -324,7 +347,10 @@ void LogServer::ThreadProc() {
 		if(client.IsInvalidHandle())
 			break;
 
-		AddClient(new Client(this, client.Detach(), jk::Socket::GetRemoteName(saddr).c_str()));
+		std::string remoteName = jk::Socket::GetRemoteName(saddr);
+		std::cout << "Connected from " << remoteName << std::endl;
+
+		AddClient(new Client(this, client.Detach(), remoteName.c_str()));
 	}
 }
 
@@ -411,16 +437,67 @@ void LogServer::Client::ThreadProc() {
 			m_pOwner->CommandFlush(sock, pCmd);
 			break;
 		}
-
 	}
 
 	// ソケットクローズ
 	sock.Shutdown(Socket::Sd::Both);
 	sock.Close();
 
+	std::cout << "Disconnected from " << remoteName << std::endl;
+
 	// 自分自身を破棄
 	delete this;
 }
 
+
+//==============================================================================
+//		GlobalSocketLogger::Frame クラス
+
+GlobalSocketLogger::Frame::Frame(const wchar_t* pszFrameName, const wchar_t* pszArgs) {
+#if defined _MSC_VER
+	this->EnterTime = Clock::SysNS();
+	this->FrameName = pszFrameName;
+
+	IncrementDepth();
+
+	std::wstringstream ss;
+
+	// プロセスIDとスレッドID追加
+	ss << L" Pid" << ::GetCurrentProcessId() << L" Tid" << ::GetCurrentThreadId();
+	// 呼び出し深さ追加
+	ss << JUNKLOG_DELIMITER << GetDepth() << JUNKLOG_DELIMITER;
+	// フレーム名と引数追加
+	ss << L"\"+: " << this->FrameName << L"(" << (pszArgs != NULL ? pszArgs : L"") << L")\"\n";
+
+	ss << std::ends;
+
+	// ログをサーバーへ送る
+	WriteLog(ss.str().c_str());
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+GlobalSocketLogger::Frame::~Frame() {
+#if defined _MSC_VER
+	std::wstringstream ss;
+
+	// プロセスIDとスレッドID追加
+	ss << L" Pid" << ::GetCurrentProcessId() << L" Tid" << ::GetCurrentThreadId();
+	// 呼び出し深さ追加
+	ss << JUNKLOG_DELIMITER << GetDepth() << JUNKLOG_DELIMITER;
+	// フレーム名と所要時間追加
+	ss << L"\"-: " << this->FrameName << JUNKLOG_DELIMITER << (Clock::SysNS() - this->EnterTime) / 1000000 << L"ms\"\n";
+
+	ss << std::ends;
+
+	// ログをサーバーへ送る
+	WriteLog(ss.str().c_str());
+
+	DecrementDepth();
+#else
+#error gcc version is not implemented.
+#endif
+}
 
 _JUNK_END

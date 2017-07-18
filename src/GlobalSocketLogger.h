@@ -8,6 +8,7 @@
 #include "Thread.h"
 #include "File.h"
 #include <vector>
+#include <sstream>
 #include <string.h>
 
 _JUNK_BEGIN
@@ -121,6 +122,8 @@ private:
 	CriticalSection m_ClientsCs; //!< m_Clients アクセス排他処理用
 };
 
+#define JUNKLOG_DELIMITER (L',')
+
 //! ソケットを使いサーバーへログを送るシングルトンクラス
 class GlobalSocketLogger {
 public:
@@ -131,7 +134,27 @@ public:
 	static LogServer::Pkt* Command(LogServer::Pkt* pCmd); //!< サーバーへコマンドパケットを送り応答を取得する、スレッドセーフ
     static void WriteLog(const wchar_t* pszText); //!< サーバーへログを送る、スレッドセーフ
     static void Flush(); //!< サーバーへログをファイルへフラッシュ要求
+	static intptr_t GetDepth(); //!< 現在のスレッドの呼び出し深度の取得
+	static intptr_t IncrementDepth(); //!< 現在のスレッドの呼び出し深度をインクリメント
+	static intptr_t DecrementDepth(); //!< 現在のスレッドの呼び出し深度をデクリメント
+
+	struct Frame {
+		std::wstring FrameName; //!< フレーム名
+		int64_t EnterTime; //!< フレーム開始時間
+
+		Frame(const wchar_t* pszFrameName, const wchar_t* pszArgs = NULL);
+		~Frame();
+	};
 };
+
+#define JUNK_LOG_FRAMEARGS __frame_Args__
+#define JUNK_LOG_DEF_FRAMEARGS std::wstringstream JUNK_LOG_FRAMEARGS
+#define JUNK_LOG_DEF_FRAMEVAR jk::GlobalSocketLogger::Frame __frame_Var__(__FUNCTIONW__, JUNK_LOG_FRAMEARGS.str().c_str())
+//#define JUNKLOG_FUNC(func) JUNKLOG_DEF_FUNCARGS(func); GlobalSocketLogger __frame_ #func __(GlobalSocketLogger::GetDepth(), L"(
+#define JUNK_LOG_FRAME() JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_DEF_FRAMEVAR
+#define JUNK_LOG_FRAME1(arg1) JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_FRAMEARGS << L#arg1 L" = " << (arg1); JUNK_LOG_DEF_FRAMEVAR
+#define JUNK_LOG_FRAME2(arg1, arg2) JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_FRAMEARGS << L#arg1 L" = " << (arg1) << L", " L#arg2 L" = " << (arg2); JUNK_LOG_DEF_FRAMEVAR
+//#define JUNKLOG_FUNC1(func, 
 
 _JUNK_END
 
