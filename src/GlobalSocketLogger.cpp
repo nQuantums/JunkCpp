@@ -47,56 +47,70 @@ static intptr_t RecvToBytes(SocketRef sock, void* pBuf, intptr_t size) {
 //==============================================================================
 //		GlobalSocketLogger クラス
 
-static CriticalSection g_CS;
-static Socket g_Socket;
-static std::wstring g_Host;
-static int g_Port;
-static std::wstring g_LocalIpAddress;
-static JUNK_TLS(intptr_t) g_Depth;
+struct GlobalSocketLogger::Instance {
+	CriticalSection CS;
+	Socket Sock;
+	std::wstring Host;
+	int Port;
+	std::wstring LocalIpAddress;
+
+	virtual intptr_t& Depth() {
+		return s_Depth.Get();
+	}
+
+private:
+	static JUNK_TLS(intptr_t) s_Depth;
+};
+
+JUNK_TLS(intptr_t) GlobalSocketLogger::Instance::s_Depth;
+
+static GlobalSocketLogger::Instance g_Instance;
+static GlobalSocketLogger::Instance* g_pInstance = &g_Instance;
+
 
 //! まだ接続していなかったら接続してソケットを返す
 static SocketRef GetSocket() {
-	CriticalSectionLock lock(&g_CS);
-	if(g_Socket.IsInvalidHandle()) {
-		g_LocalIpAddress = Encoding::ASCII().GetString(Socket::GetLocalIPAddress(Socket::Af::IPv4));
+	CriticalSectionLock lock(&g_pInstance->CS);
+	if(g_pInstance->Sock.IsInvalidHandle()) {
+		g_pInstance->LocalIpAddress = Encoding::ASCII().GetString(Socket::GetLocalIPAddress(Socket::Af::IPv4));
 
 		std::wstringstream ss;
-		ss << g_Port;
+		ss << g_pInstance->Port;
 
 		Socket::Endpoint ep;
-		ep.Create(g_Host.c_str(), ss.str().c_str(), Socket::St::Stream, Socket::Af::IPv4, false);
+		ep.Create(g_pInstance->Host.c_str(), ss.str().c_str(), Socket::St::Stream, Socket::Af::IPv4, false);
 		std::vector<std::string> hosts, services;
 		ep.GetNames(hosts, services);
 
-		g_Socket.Create(ep);
-		if(!g_Socket.Connect(ep)) {
+		g_pInstance->Sock.Create(ep);
+		if(!g_pInstance->Sock.Connect(ep)) {
 			std::cerr << "Failed to connect to server." << std::endl;
 			return SocketRef();
 		}
 
-		g_Socket.SetNoDelay(1);
+		g_pInstance->Sock.SetNoDelay(1);
 	}
-	return g_Socket;
+	return g_pInstance->Sock;
 }
 
 
-//! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
+//! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
 void GlobalSocketLogger::Startup(const wchar_t* pszHost, int port) {
-	CriticalSectionLock lock(&g_CS);
-	g_Host = pszHost;
-	g_Port = port;
+	CriticalSectionLock lock(&g_pInstance->CS);
+	g_pInstance->Host = pszHost;
+	g_pInstance->Port = port;
 	Socket::Startup();
 }
 
-//! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
+//! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
 void GlobalSocketLogger::Startup(const char* pszHost, int port) {
-	CriticalSectionLock lock(&g_CS);
-	g_Host = Encoding::ASCII().GetString(pszHost);
-	g_Port = port;
+	CriticalSectionLock lock(&g_pInstance->CS);
+	g_pInstance->Host = Encoding::ASCII().GetString(pszHost);
+	g_pInstance->Port = port;
 	Socket::Startup();
 }
 
-//! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
+//! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
 void GlobalSocketLogger::Startup(wchar_t* pszIniFile) {
 #if defined _MSC_VER
 	std::wstring iniFilePath = FilePath::Combine(Directory::GetExeDirectory(), pszIniFile);
@@ -122,6 +136,11 @@ void GlobalSocketLogger::Startup(wchar_t* pszIniFile) {
 #endif
 }
 
+//! 他DLLのインスタンスを指定して初期化する
+void GlobalSocketLogger::Startup(Instance* pInstance) {
+	g_pInstance = pInstance;
+}
+
 //! 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
 void GlobalSocketLogger::Cleanup() {
 	Socket::Cleanup();
@@ -130,7 +149,7 @@ void GlobalSocketLogger::Cleanup() {
 //! サーバーへコマンドパケットを送り応答を取得する
 LogServer::Pkt* GlobalSocketLogger::Command(LogServer::Pkt* pCmd) {
 	// 送って受け取るまでを排他処理とする
-	CriticalSectionLock lock(&g_CS);
+	CriticalSectionLock lock(&g_pInstance->CS);
 	SocketRef sock = GetSocket();
 
 	// とりあえず送る
@@ -179,17 +198,17 @@ void GlobalSocketLogger::FileClose() {
 
 //! 現在のスレッドの呼び出し深度の取得
 intptr_t GlobalSocketLogger::GetDepth() {
-	return g_Depth.Get();
+	return g_pInstance->Depth();
 }
 
 //! 現在のスレッドの呼び出し深度をインクリメント
 intptr_t GlobalSocketLogger::IncrementDepth() {
-	return g_Depth.Get()++;
+	return g_pInstance->Depth()++;
 }
 
 //! 現在のスレッドの呼び出し深度をデクリメント
 intptr_t GlobalSocketLogger::DecrementDepth() {
-	return g_Depth.Get()--;
+	return g_pInstance->Depth()--;
 }
 
 

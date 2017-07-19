@@ -12,8 +12,46 @@ namespace LogViewer {
 		public UInt32 Pid;
 		public UInt32 Tid;
 		public int Depth;
-		public bool Open;
+		public bool Enter;
 		public string FrameName;
+
+		public override bool Equals(object obj) {
+			if (obj is Record) {
+				return this == (Record)obj;
+			}
+			return base.Equals(obj);
+		}
+
+		public override int GetHashCode() {
+			var hash = this.Ip != null ? this.Ip.GetHashCode() : 0;
+			hash ^= this.Pid.GetHashCode();
+			hash ^= this.Tid.GetHashCode();
+			hash ^= this.Depth.GetHashCode();
+			hash ^= this.Enter.GetHashCode();
+			if (this.FrameName != null)
+				hash ^= this.FrameName.GetHashCode();
+			return hash;
+		}
+
+		public static bool operator ==(Record a, Record b) {
+			if (a.Ip != b.Ip)
+				return false;
+			if (a.Pid != b.Pid)
+				return false;
+			if (a.Tid != b.Tid)
+				return false;
+			if (a.Depth != b.Depth)
+				return false;
+			if (a.Enter != b.Enter)
+				return false;
+			if (a.FrameName != b.FrameName)
+				return false;
+			return true;
+		}
+
+		public static bool operator !=(Record a, Record b) {
+			return !(a == b);
+		}
 
 		public static bool TryParse(string line, out Record record) {
 			record = new Record();
@@ -83,7 +121,7 @@ namespace LogViewer {
 			end = line.IndexOf(':', start);
 			if (end < 0)
 				return false;
-			result.Open = line[end - 1] == '+';
+			result.Enter = line[end - 1] == '+';
 
 			// フレーム内容解析
 			start = end + 2;
@@ -98,7 +136,7 @@ namespace LogViewer {
 			var lines = new List<string>();
 
 			using (var csv = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-			using (var sr = new StreamReader(csv)) {
+			using (var sr = new StreamReader(csv, Encoding.UTF8)) {
 				while (!sr.EndOfStream) {
 					lines.Add(sr.ReadLine());
 				}
