@@ -56,7 +56,6 @@ static JUNK_TLS(intptr_t) g_Depth;
 
 //! まだ接続していなかったら接続してソケットを返す
 static SocketRef GetSocket() {
-	CriticalSectionLock lock(&g_CS);
 	if(g_Socket.IsInvalidHandle()) {
 		g_LocalIpAddress = Encoding::ASCII().GetString(Socket::GetLocalIPAddress(Socket::Af::IPv4));
 
@@ -82,7 +81,6 @@ static SocketRef GetSocket() {
 
 //! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
 void GlobalSocketLogger::Startup(const wchar_t* pszHost, int port) {
-	CriticalSectionLock lock(&g_CS);
 	g_Host = pszHost;
 	g_Port = port;
 	Socket::Startup();
@@ -90,7 +88,6 @@ void GlobalSocketLogger::Startup(const wchar_t* pszHost, int port) {
 
 //! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
 void GlobalSocketLogger::Startup(const char* pszHost, int port) {
-	CriticalSectionLock lock(&g_CS);
 	g_Host = Encoding::ASCII().GetString(pszHost);
 	g_Port = port;
 	Socket::Startup();
@@ -132,6 +129,8 @@ LogServer::Pkt* GlobalSocketLogger::Command(LogServer::Pkt* pCmd) {
 	// 送って受け取るまでを排他処理とする
 	CriticalSectionLock lock(&g_CS);
 	SocketRef sock = GetSocket();
+
+	std::cout << "Send to " << sock.GetRemoteName() << std::endl;
 
 	// とりあえず送る
 	sock.Send(pCmd, pCmd->PacketSize());

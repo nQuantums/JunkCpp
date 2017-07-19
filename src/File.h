@@ -9,7 +9,7 @@
 _JUNK_BEGIN
 
 //! ファイル
-class File {
+class JUNKAPICLASS File {
 public:
 	//! アクセス指定フラグ
 	enum AccessEnum {

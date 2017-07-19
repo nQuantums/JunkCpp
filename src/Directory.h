@@ -9,7 +9,7 @@
 _JUNK_BEGIN
 
 //! ディレクトリ
-class Directory {
+class JUNKAPICLASS Directory {
 public:
 	static ibool GetCurrent(std::string& curDir); //!< カレントディレクトリを取得する
 	static ibool Exists(const wchar_t* pszDir); //!< 指定されたディレクトリが存在しているか調べる

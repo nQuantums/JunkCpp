@@ -17,7 +17,7 @@
 _JUNK_BEGIN
 
 //! 文字コードクラス
-class  Encoding {
+class JUNKAPICLASS Encoding {
 #if defined _MSC_VER
 private:
 	uint32_t CodePage; //!< コードページ

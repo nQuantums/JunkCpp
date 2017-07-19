@@ -29,7 +29,7 @@
 _JUNK_BEGIN
 
 //! ソケットクラス、デストラクタではソケットクローズしない
-struct SocketRef {
+struct JUNKAPICLASS SocketRef {
 #if defined __GNUC__
 	typedef intptr_t Handle; // ハンドル型
 #elif defined  _MSC_VER
@@ -71,7 +71,7 @@ struct SocketRef {
 	};
 
 	//! エンドポイント情報
-	struct Endpoint {
+	struct JUNKAPICLASS Endpoint {
 		addrinfo* pRoot;
 		std::vector<addrinfo*> AddrInfos;
 
@@ -156,7 +156,7 @@ struct SocketRef {
 
 #pragma pack(push, 1)
 	//! IPv4のアドレスとポートを示す構造体
-	struct IPv4AddrPort {
+	struct JUNKAPICLASS IPv4AddrPort {
 		in_addr Addr; //!< アドレス
 		uint32_t Port; //!< ポート
 
@@ -193,7 +193,7 @@ struct SocketRef {
 	};
 
 	//! IPv6のアドレスとポートを示す構造体
-	struct IPv6AddrPort {
+	struct JUNKAPICLASS IPv6AddrPort {
 		in6_addr Addr; //!< 
 		uint32_t Port; //!< ポート
 
@@ -262,6 +262,12 @@ struct SocketRef {
 
 	//! リモート名の取得
 	static std::string GetRemoteName(const sockaddr_storage& addrst);
+
+	//! リモート名の取得
+	static std::string GetRemoteName(Handle hSock);
+
+	//! リモート名の取得
+	static std::wstring GetRemoteNameW(Handle hSock);
 
 	//! ローカルホスト名を取得
 	static std::string GetHostName();
@@ -404,6 +410,9 @@ struct SocketRef {
 
 	//! ソケットアドレスから名前情報を取得する
 	static bool GetName(const sockaddr* pAddr, socklen_t addrLen, std::string& host, std::string& service);
+
+	//! リモート名の取得
+	std::string GetRemoteName() const;
 
 	//! ソケットから読み込み
 	_FINLINE intptr_t Recv(void* pBuf, size_t size) {
@@ -551,7 +560,7 @@ struct SocketRef {
 };
 
 //! ソケットクラス
-struct Socket: public SocketRef {
+struct JUNKAPICLASS Socket: public SocketRef {
 	//! コンストラクタ
 	Socket() {
 	}

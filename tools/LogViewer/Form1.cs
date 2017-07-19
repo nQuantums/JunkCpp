@@ -75,7 +75,9 @@ namespace LogViewer {
 		List<RecordRange> _Ranges = new List<RecordRange>();
 
 		public RecordRange Range {
-			get => _Range;
+            get {
+                return _Range;
+            }
 			set {
 				if (_Range == value)
 					return;
@@ -205,54 +207,163 @@ namespace LogViewer {
 			var si = this.lvRecords.SelectedIndices;
 			if (si.Count == 0)
 				return new RecordRange();
-
-			var index = si[0];
-			var records = GetRecords();
-			var curRecord = records[index];
-			var range = new RecordRange();
-			range.StartIndex = index;
-			range.EndIndex = index;
-			range.Ip = curRecord.Ip;
-			range.Pid = curRecord.Pid;
-			range.Tid = curRecord.Tid;
-			range.Depth = curRecord.Depth;
-
-			if (curRecord.Open) {
-				for (int i = index + 1; i < records.Length; i++) {
-					var r = records[i];
-					if (r.Ip != range.Ip)
-						continue;
-					if (r.Pid != range.Pid)
-						continue;
-					if (r.Tid != range.Tid)
-						continue;
-					if (r.Depth < range.Depth)
-						break;
-					range.EndIndex = i;
-					if (r.Depth == range.Depth && !r.Open)
-						break;
-				}
-			} else {
-				for (int i = index - 1; i != -1; i--) {
-					var r = records[i];
-					if (r.Ip != range.Ip)
-						continue;
-					if (r.Pid != range.Pid)
-						continue;
-					if (r.Tid != range.Tid)
-						continue;
-					if (r.Depth < range.Depth)
-						break;
-					range.StartIndex = i;
-					if (r.Depth == range.Depth && r.Open)
-						break;
-				}
-			}
-
-			return range;
+            return SearchRange(si[0]);
 		}
 
-		void AfterFilterChange(int start = -1, int end = -1) {
+        public RecordRange SearchRange(int index)
+        {
+            var records = GetRecords();
+            var curRecord = records[index];
+            var range = new RecordRange();
+            range.StartIndex = index;
+            range.EndIndex = index;
+            range.Ip = curRecord.Ip;
+            range.Pid = curRecord.Pid;
+            range.Tid = curRecord.Tid;
+            range.Depth = curRecord.Depth;
+
+            if (curRecord.Open)
+            {
+                for (int i = index + 1; i < records.Length; i++)
+                {
+                    var r = records[i];
+                    if (r.Ip != range.Ip)
+                        continue;
+                    if (r.Pid != range.Pid)
+                        continue;
+                    if (r.Tid != range.Tid)
+                        continue;
+                    if (r.Depth < range.Depth)
+                        break;
+                    range.EndIndex = i;
+                    if (r.Depth == range.Depth && !r.Open)
+                        break;
+                }
+            }
+            else
+            {
+                for (int i = index - 1; i != -1; i--)
+                {
+                    var r = records[i];
+                    if (r.Ip != range.Ip)
+                        continue;
+                    if (r.Pid != range.Pid)
+                        continue;
+                    if (r.Tid != range.Tid)
+                        continue;
+                    if (r.Depth < range.Depth)
+                        break;
+                    range.StartIndex = i;
+                    if (r.Depth == range.Depth && r.Open)
+                        break;
+                }
+            }
+
+            return range;
+        }
+
+        public int SearchSourceIndex()
+        {
+            var range = this.Range;
+            if (range.Depth == 0)
+                return range.StartIndex;
+
+            var records = GetRecords();
+            var index = range.StartIndex;
+
+            range.Depth--;
+
+            for (int i = index - 1; i != -1; i--)
+            {
+                var r = records[i];
+                if (r.Ip != range.Ip)
+                    continue;
+                if (r.Pid != range.Pid)
+                    continue;
+                if (r.Tid != range.Tid)
+                    continue;
+                if (r.Depth < range.Depth)
+                    break;
+                if (r.Depth == range.Depth && r.Open)
+                    return i;
+            }
+
+            return index;
+        }
+
+        public int SearchDestIndex()
+        {
+            var range = this.Range;
+            if (range.Depth == 0)
+                return range.StartIndex;
+
+            var records = GetRecords();
+            var index = range.StartIndex;
+
+            range.Depth++;
+
+            for (int i = index + 1; i < range.EndIndex; i++)
+            {
+                var r = records[i];
+                if (r.Ip != range.Ip)
+                    continue;
+                if (r.Pid != range.Pid)
+                    continue;
+                if (r.Tid != range.Tid)
+                    continue;
+                if (r.Depth == range.Depth && r.Open)
+                    return i;
+            }
+
+            return index;
+        }
+
+        public int SearchNextIndex()
+        {
+            var range = this.Range;
+            var sourceRange = SearchRange(SearchSourceIndex());
+            var records = GetRecords();
+
+            for (int i = range.EndIndex + 1; i < sourceRange.EndIndex; i++)
+            {
+                var r = records[i];
+                if (r.Ip != range.Ip)
+                    continue;
+                if (r.Pid != range.Pid)
+                    continue;
+                if (r.Tid != range.Tid)
+                    continue;
+                if (r.Depth == range.Depth && r.Open)
+                    return i;
+            }
+
+            return range.EndIndex;
+        }
+
+        public int SearchPrevIndex()
+        {
+            var range = this.Range;
+            var sourceRange = SearchRange(SearchSourceIndex());
+            var records = GetRecords();
+
+            for (int i = range.StartIndex - 1; sourceRange.StartIndex < i; i--)
+            {
+                var r = records[i];
+                if (r.Ip != range.Ip)
+                    continue;
+                if (r.Pid != range.Pid)
+                    continue;
+                if (r.Tid != range.Tid)
+                    continue;
+                if (r.Depth == range.Depth && r.Open)
+                    return i;
+            }
+
+            return range.StartIndex;
+        }
+
+        void AfterFilterChange(int start = -1, int end = -1)
+        {
 			if (start < 0)
 				start = 0;
 			if (end < 0 || this.lvRecords.VirtualListSize <= end)
@@ -262,7 +373,7 @@ namespace LogViewer {
 			this.lvRecords.RedrawItems(start, end, true);
 		}
 
-		void Search(bool forward, string ip, UInt32 pid, UInt32 tid) {
+		void Search(bool forward, string ip, UInt32 pid, UInt32 tid, string method) {
 			var si = this.lvRecords.SelectedIndices;
 			var startIndex = si.Count != 0 ? si[0] : -1;
 			var records = GetRecords();
@@ -270,7 +381,7 @@ namespace LogViewer {
 			if (forward) {
 				for (int i = startIndex + 1; i < records.Length; i++) {
 					var r = records[i];
-					if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid)) {
+                    if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid) && (method == null || r.FrameName.Contains(method))) {
 						si.Clear();
 						si.Add(i);
 						this.lvRecords.EnsureVisible(i);
@@ -280,8 +391,8 @@ namespace LogViewer {
 			} else {
 				for (int i = startIndex - 1; 0 <= i; i--) {
 					var r = records[i];
-					if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid)) {
-						si.Clear();
+                    if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid) && (method == null || r.FrameName.Contains(method))) {
+                        si.Clear();
 						si.Add(i);
 						this.lvRecords.EnsureVisible(i);
 						break;
@@ -294,14 +405,18 @@ namespace LogViewer {
 			string ip;
 			UInt32 pid;
 			UInt32 tid;
+            string method;
 
 			ip = this.tbIp.Text;
 			if (string.IsNullOrEmpty(ip))
 				ip = null;
-			UInt32.TryParse(this.tbPid.Text, out pid);
+            method = this.tbMethod.Text;
+            if (string.IsNullOrEmpty(method))
+                method = null;
+            UInt32.TryParse(this.tbPid.Text, out pid);
 			UInt32.TryParse(this.tbTid.Text, out tid);
 
-			Search(sender == this.btnSearchForward, ip, pid, tid);
+            Search(sender == this.btnSearchForward, ip, pid, tid, method);
 		}
 
 		private void btnSelAdd_Click(object sender, EventArgs e) {
@@ -339,5 +454,58 @@ namespace LogViewer {
 			si.Add(index);
 			this.lvRecords.EnsureVisible(index);
 		}
+
+        private void btnJumpSource_Click(object sender, EventArgs e)
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return;
+
+            var index = SearchSourceIndex();
+
+            si.Clear();
+            si.Add(index);
+            this.lvRecords.EnsureVisible(index);
+
+        }
+
+        private void btnJumpDest_Click(object sender, EventArgs e)
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return;
+
+            var index = SearchDestIndex();
+
+            si.Clear();
+            si.Add(index);
+            this.lvRecords.EnsureVisible(index);
+        }
+
+        private void btnJumpNext_Click(object sender, EventArgs e)
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return;
+
+            var index = SearchNextIndex();
+
+            si.Clear();
+            si.Add(index);
+            this.lvRecords.EnsureVisible(index);
+        }
+
+        private void btnJumpPrev_Click(object sender, EventArgs e)
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return;
+
+            var index = SearchPrevIndex();
+
+            si.Clear();
+            si.Add(index);
+            this.lvRecords.EnsureVisible(index);
+        }
 	}
 }

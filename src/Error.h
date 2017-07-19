@@ -13,7 +13,7 @@
 _JUNK_BEGIN
 
 //! エラー情報関係クラス
-class Error {
+class JUNKAPICLASS Error {
 public:
 	static void SetLastError(const char* pszFmt, ...); //!< スレッド毎の最終エラー文字列を設定する
 	static void SetLastErrorFromErrno(int en); //!< errno から対応する文字列を取得してスレッド毎のエラー文字列として設定する
@@ -45,7 +45,7 @@ public:
 };
 
 //! エラー情報
-struct ErrorInfo {
+struct JUNKAPICLASS ErrorInfo {
 	ibool _Empty; //!< エラーが空かどうか
 	std::string Message; //!< エラーメッセージ
 

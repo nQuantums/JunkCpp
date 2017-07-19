@@ -14,7 +14,7 @@
 _JUNK_BEGIN
 
 //! 年月日時分秒とミリ秒
-struct DateTimeValue {
+struct JUNKAPICLASS DateTimeValue {
 	uint16_t Year; //!< 年
 	uint16_t Month; //!< 月、1～12
 	uint16_t DayOfWeek; //!< 曜日、0:日曜日～6:土曜日
@@ -26,7 +26,7 @@ struct DateTimeValue {
 };
 
 //! 日時
-struct DateTime {
+struct JUNKAPICLASS DateTime {
 #if defined _MSC_VER
 	uint64_t Tick; //!< 規定日時からの経過時間値
 

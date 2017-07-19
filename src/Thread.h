@@ -19,7 +19,7 @@
 _JUNK_BEGIN
 
 //! スレッド
-class Thread {
+class JUNKAPICLASS Thread {
 public:
 #if defined __GNUC__
 	typedef pthread_t Handle; //!< スレッドハンドル型
@@ -91,7 +91,7 @@ protected:
 };
 
 //! クリティカルセクション
-class CriticalSection {
+class JUNKAPICLASS CriticalSection {
 public:
 	CriticalSection(); //!< コンストラクタ
 	~CriticalSection(); // デストラクタ
@@ -109,7 +109,7 @@ protected:
 };
 
 //! イベント
-class Event {
+class JUNKAPICLASS Event {
 public:
 	Event(); //!< コンストラクタ
 	~Event(); // デストラクタ
@@ -132,7 +132,7 @@ protected:
 template<
 class _Sync //!< 同期用オブジェクト、Lock() と Unlock() メソッドを実装している必要がある
 >
-class Lock {
+class JUNKAPICLASS Lock {
 public:
 	//! コンストラクタ、指定された同期オブジェクトをロックする
 	Lock(_Sync* p) {

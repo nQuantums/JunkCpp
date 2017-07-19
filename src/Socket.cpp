@@ -105,6 +105,44 @@ std::string SocketRef::GetRemoteName(
 	}
 }
 
+//! リモート名の取得
+std::string SocketRef::GetRemoteName(
+	Handle hSock //!< [in] ソケットハンドル
+) {
+	sockaddr_storage saddr;
+	socklen_t saddrlen = sizeof(saddr);
+	if(getpeername(hSock, (sockaddr*)&saddr, &saddrlen) != 0) {
+		return std::string();
+	}
+#if 1700 <= _MSC_VER
+	return std::move(GetRemoteName(saddr));
+#else
+	return GetRemoteName(saddr);
+#endif
+}
+
+//! リモート名の取得
+std::wstring SocketRef::GetRemoteNameW(
+	Handle hSock //!< [in] ソケットハンドル
+) {
+	sockaddr_storage saddr;
+	socklen_t saddrlen = sizeof(saddr);
+	if(getpeername(hSock, (sockaddr*)&saddr, &saddrlen) != 0) {
+		return std::wstring();
+	}
+#if 1700 <= _MSC_VER
+	std::string s = std::move(GetRemoteName(saddr));
+	std::wstring ws;
+	ws.assign(s.begin(), s.end());
+	return std::move(ws);
+#else
+	std::string s = GetRemoteName(saddr);
+	std::wstring ws;
+	ws.assign(s.begin(), s.end());
+	return ws;
+#endif
+}
+
 //! ローカルホスト名を取得
 std::string SocketRef::GetHostName() {
 	char name[256];
@@ -285,6 +323,20 @@ bool SocketRef::GetName(
 	host = hbuf;
 	service = sbuf;
 	return true;
+}
+
+//! リモート名の取得
+std::string SocketRef::GetRemoteName() const {
+	sockaddr_storage saddr;
+	socklen_t saddrlen = sizeof(saddr);
+	if(getpeername(m_hSock, (sockaddr*)&saddr, &saddrlen) != 0) {
+		return std::string();
+	}
+#if 1700 <= _MSC_VER
+	return std::move(GetRemoteName(saddr));
+#else
+	return GetRemoteName(saddr);
+#endif
 }
 
 _JUNK_END

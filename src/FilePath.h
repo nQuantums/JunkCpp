@@ -8,7 +8,7 @@
 _JUNK_BEGIN
 
 //! ファイルパス操作
-class FilePath {
+class JUNKAPICLASS FilePath {
 public:
 	static ibool Combine(std::string& result, const char* pszPath, const char* pszFile); //!< 指定されたパス名とファイル名を連結する
 	static ibool StripPath(std::string& result, const char* pszPath); //!< パス名を取り除きファイル名部分のみ取得する

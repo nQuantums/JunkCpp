@@ -14,7 +14,7 @@ _JUNK_BEGIN
 //! スレッドローカルストレージ
 //! AndroidNDK などで thread_local キーワード使えない時に使用する。
 template<class T>
-struct ThreadLocalStorage {
+struct JUNKAPICLASS ThreadLocalStorage {
 	pthread_key_t TlsKey; //!< TLSのキー
 
 	//! コンストラクタ
@@ -47,7 +47,7 @@ struct ThreadLocalStorage {
 #else
 //! スレッドローカルストレージ
 template<class T>
-struct ThreadLocalStorage {
+struct JUNKAPICLASS ThreadLocalStorage {
 	T Value; //!< スレッド毎にインスタンス化される値
 
 	//! TLSに保存されているオブジェクトの取得

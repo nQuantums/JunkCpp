@@ -9,7 +9,7 @@
 _JUNK_BEGIN
 
 //! 文字列関係ヘルパ
-struct Str {
+struct JUNKAPICLASS Str {
 	//static void FV(std::wstring& s, const wchar_t* pszFmt, va_list args); //!< 指定の文字列へ書式化した文字を代入する
 	//static void AFV(std::wstring& s, const wchar_t* pszFmt, va_list args); //!< 指定の文字列へ書式化した文字を追加する
 	//static void F(std::wstring& s, const wchar_t* pszFmt, ...); //!< 指定の文字列へ書式化した文字を代入する

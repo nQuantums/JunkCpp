@@ -141,7 +141,7 @@ public:
 	static intptr_t IncrementDepth(); //!< 現在のスレッドの呼び出し深度をインクリメント
 	static intptr_t DecrementDepth(); //!< 現在のスレッドの呼び出し深度をデクリメント
 
-	struct JUNKAPICLASS Frame {
+	struct Frame {
 		std::wstring FrameName; //!< フレーム名
 		int64_t EnterTime; //!< フレーム開始時間
 
@@ -157,6 +157,8 @@ public:
 #define JUNK_LOG_FRAME() JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_DEF_FRAMEVAR
 #define JUNK_LOG_FRAME1(arg1) JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_FRAMEARGS << L#arg1 L" = " << (arg1); JUNK_LOG_DEF_FRAMEVAR
 #define JUNK_LOG_FRAME2(arg1, arg2) JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_FRAMEARGS << L#arg1 L" = " << (arg1) << L", " L#arg2 L" = " << (arg2); JUNK_LOG_DEF_FRAMEVAR
+#define JUNK_LOG_FRAME3(arg1, arg2, arg3) JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_FRAMEARGS << L#arg1 L" = " << (arg1) << L", " L#arg2 L" = " << (arg2) << L", " L#arg3 L" = " << (arg3); JUNK_LOG_DEF_FRAMEVAR
+#define JUNK_LOG_FRAME4(arg1, arg2, arg3, arg4) JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_FRAMEARGS << L#arg1 L" = " << (arg1) << L", " L#arg2 L" = " << (arg2) << L", " L#arg3 L" = " << (arg3) << L", " L#arg4 L" = " << (arg4); JUNK_LOG_DEF_FRAMEVAR
 //#define JUNKLOG_FUNC1(func, 
 
 _JUNK_END
