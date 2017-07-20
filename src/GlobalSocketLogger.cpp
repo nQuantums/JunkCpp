@@ -94,6 +94,11 @@ static SocketRef GetSocket() {
 }
 
 
+//! 通信用ソケットなどの情報を保持するインスタンスを取得する
+GlobalSocketLogger::Instance* GlobalSocketLogger::GetInstance() {
+	return g_pInstance;
+}
+
 //! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
 void GlobalSocketLogger::Startup(const wchar_t* pszHost, int port) {
 	CriticalSectionLock lock(&g_pInstance->CS);
@@ -113,7 +118,7 @@ void GlobalSocketLogger::Startup(const char* pszHost, int port) {
 //! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
 void GlobalSocketLogger::Startup(wchar_t* pszIniFile) {
 #if defined _MSC_VER
-	std::wstring iniFilePath = FilePath::Combine(Directory::GetExeDirectory(), pszIniFile);
+	std::wstring iniFilePath = FilePath::Combine(Directory::GetExeDirectoryW(), pszIniFile);
 	std::wstring address;
 	std::wstring port;
 
@@ -231,7 +236,7 @@ LogServer::LogServer() {
 
 //! 別スレッドでサーバー処理を開始する、スレッドアンセーフ
 ibool LogServer::Start(const wchar_t* pszLogFolder, int port) {
-	m_LogFolder = FilePath::Combine(Directory::GetExeDirectory(), pszLogFolder);
+	m_LogFolder = FilePath::Combine(Directory::GetExeDirectoryW(), pszLogFolder);
 	m_LogFile.Close();
 
 	if (!Directory::Exists(m_LogFolder.c_str())) {

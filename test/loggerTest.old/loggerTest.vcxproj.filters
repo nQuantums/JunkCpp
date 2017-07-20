@@ -7,14 +7,14 @@
     </Filter>
     <Filter Include="ヘッダー ファイル">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
     <Filter Include="リソース ファイル">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Junk">
-      <UniqueIdentifier>{5be6a14f-2c67-41f5-96f9-60d15742d602}</UniqueIdentifier>
+      <UniqueIdentifier>{4967773b-b12d-464c-970e-96a1cc302ada}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -48,12 +48,6 @@
     <ClInclude Include="..\..\src\FilePath.h">
       <Filter>Junk</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Fixed.h">
-      <Filter>Junk</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\Geom.h">
-      <Filter>Junk</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\GlobalSocketLogger.h">
       <Filter>Junk</Filter>
     </ClInclude>
@@ -63,16 +57,10 @@
     <ClInclude Include="..\..\src\JunkDef.h">
       <Filter>Junk</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Logger.h">
-      <Filter>Junk</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\Socket.h">
       <Filter>Junk</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Str.h">
-      <Filter>Junk</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\TemplateMeta.h">
       <Filter>Junk</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Thread.h">
@@ -81,7 +69,7 @@
     <ClInclude Include="..\..\src\ThreadLocalStorage.h">
       <Filter>Junk</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Vector.h">
+    <ClInclude Include="..\..\src\TimeSpan.h">
       <Filter>Junk</Filter>
     </ClInclude>
   </ItemGroup>
@@ -123,6 +111,9 @@
       <Filter>Junk</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Thread.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\TimeSpan.cpp">
       <Filter>Junk</Filter>
     </ClCompile>
   </ItemGroup>

@@ -18,6 +18,23 @@ _JUNK_BEGIN
 
 //! カレントディレクトリを取得する
 ibool Directory::GetCurrent(
+	std::wstring& curDir //<! [out] カレントディレクトリパス名が返る
+) {
+#if defined _MSC_VER
+	wchar_t buf[MAX_PATH];
+	if (!::GetCurrentDirectoryW(sizeof(buf), buf)) {
+		Error::SetLastErrorFromWinErr();
+		return false;
+	}
+	curDir = buf;
+	return true;
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! カレントディレクトリを取得する
+ibool Directory::GetCurrent(
 	std::string& curDir //<! [out] カレントディレクトリパス名が返る
 ) {
 #if defined __GNUC__
@@ -103,17 +120,36 @@ ibool Directory::Create(
 }
 
 //! カレントディレクトリを取得する
-std::wstring Directory::GetCurrent() {
-#if defined _MSC_VER
-	wchar_t path[MAX_PATH];
-	if (!::GetCurrentDirectoryW(MAX_PATH, path)) {
-		Error::SetLastErrorFromWinErr();
-		return false;
-	}
+std::wstring Directory::GetCurrentW() {
+	std::wstring s;
+	GetCurrent(s);
 #if 1700 <= _MSC_VER
-	return std::move(std::wstring(path));
+	return std::move(s);
 #else
-	return path;
+	return s;
+#endif
+}
+
+//! カレントディレクトリを取得する
+std::string Directory::GetCurrentA() {
+	std::string s;
+	GetCurrent(s);
+#if 1700 <= _MSC_VER
+	return std::move(s);
+#else
+	return s;
+#endif
+}
+
+//! 実行中EXEの置かれているディレクトリパス名を取得する
+std::wstring Directory::GetExeDirectoryW() {
+#if defined _MSC_VER
+	wchar_t path[MAX_PATH] = L"";
+	::GetModuleFileNameW(NULL, path, MAX_PATH);
+#if 1700 <= _MSC_VER
+	return std::move(FilePath::GetDirectoryName(path));
+#else
+	return FilePath::GetDirectoryName(path);
 #endif
 #else
 #error gcc version is not implemented.
@@ -121,10 +157,10 @@ std::wstring Directory::GetCurrent() {
 }
 
 //! 実行中EXEの置かれているディレクトリパス名を取得する
-std::wstring Directory::GetExeDirectory() {
+std::string Directory::GetExeDirectoryA() {
 #if defined _MSC_VER
-	wchar_t path[MAX_PATH] = L"";
-	::GetModuleFileNameW(NULL, path, MAX_PATH);
+	char path[MAX_PATH] = "";
+	::GetModuleFileNameA(NULL, path, MAX_PATH);
 #if 1700 <= _MSC_VER
 	return std::move(FilePath::GetDirectoryName(path));
 #else

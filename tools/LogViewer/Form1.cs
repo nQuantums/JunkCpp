@@ -352,7 +352,7 @@ namespace LogViewer {
 			if (forward) {
 				for (int i = startIndex + 1; i < records.Length; i++) {
 					var r = records[i];
-					if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid) && (method == null || r.FrameName.Contains(method))) {
+					if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid) && (method == null || 0 <= r.FrameName.IndexOf(method, StringComparison.CurrentCultureIgnoreCase))) {
 						si.Clear();
 						si.Add(i);
 						this.lvRecords.EnsureVisible(i);
@@ -362,7 +362,7 @@ namespace LogViewer {
 			} else {
 				for (int i = startIndex - 1; 0 <= i; i--) {
 					var r = records[i];
-					if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid) && (method == null || r.FrameName.Contains(method))) {
+                    if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid) && (method == null || 0 <= r.FrameName.IndexOf(method, StringComparison.CurrentCultureIgnoreCase))) {
 						si.Clear();
 						si.Add(i);
 						this.lvRecords.EnsureVisible(i);

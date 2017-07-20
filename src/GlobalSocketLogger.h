@@ -53,7 +53,7 @@ public:
 
 		static Pkt* Allocate(size_t size) {
 			Pkt* pPkt = (Pkt*)new uint8_t[sizeof(pPkt->Size) + size];
-			pPkt->Size = size;
+			pPkt->Size = (int32_t)size;
 			return pPkt;
 		}
 
@@ -132,6 +132,7 @@ public:
 	//! インスタンス
 	struct Instance;
 	
+	static Instance* GetInstance(); //!< 通信用ソケットなどの情報を保持するインスタンスを取得する
 	static void Startup(const wchar_t* pszHost, int port); //!< ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
     static void Startup(const char* pszHost, int port); //!< ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
 	static void Startup(wchar_t* pszIniFile = L"GlobalSocketLogger.ini"); //!< ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
@@ -154,14 +155,29 @@ public:
 	};
 };
 
-#define JUNK_LOG_FRAMEARGS __frame_Args__
-#define JUNK_LOG_DEF_FRAMEARGS std::wstringstream JUNK_LOG_FRAMEARGS
-#define JUNK_LOG_DEF_FRAMEVAR jk::GlobalSocketLogger::Frame __frame_Var__(__FUNCTIONW__, JUNK_LOG_FRAMEARGS.str().c_str())
-//#define JUNKLOG_FUNC(func) JUNKLOG_DEF_FUNCARGS(func); GlobalSocketLogger __frame_ #func __(GlobalSocketLogger::GetDepth(), L"(
-#define JUNK_LOG_FRAME() JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_DEF_FRAMEVAR
-#define JUNK_LOG_FRAME1(arg1) JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_FRAMEARGS << L#arg1 L" = " << (arg1); JUNK_LOG_DEF_FRAMEVAR
-#define JUNK_LOG_FRAME2(arg1, arg2) JUNK_LOG_DEF_FRAMEARGS; JUNK_LOG_FRAMEARGS << L#arg1 L" = " << (arg1) << L", " L#arg2 L" = " << (arg2); JUNK_LOG_DEF_FRAMEVAR
-//#define JUNKLOG_FUNC1(func, 
+#define JUNK_LOG_FUNC_ARGSVAR __jk_log_func_args__
+#define JUNK_LOG_FUNC_BEGIN std::wstringstream JUNK_LOG_FUNC_ARGSVAR
+#define JUNK_LOG_FUNC_ARGS_BEGIN(arg) std::wstringstream JUNK_LOG_FUNC_ARGSVAR; JUNK_LOG_FUNC_ARGSVAR << L#arg L" = " << (arg)
+#define JUNK_LOG_FUNC_ARGS(arg) << L", " L#arg L" = " << (arg)
+#define JUNK_LOG_FUNC_COMMIT ; jk::GlobalSocketLogger::Frame __jk_log_func__(__FUNCTIONW__, JUNK_LOG_FUNC_ARGSVAR.str().c_str())
+
+#define JUNK_LOG_FRAME_ARGSVAR(name) __jk_log_frame_ ## name ## _args__
+#define JUNK_LOG_FRAME_BEGIN(name) std::wstringstream JUNK_LOG_FRAME_ARGSVAR(name)
+#define JUNK_LOG_FRAME_ARGS_BEGIN(name, arg) std::wstringstream JUNK_LOG_FRAME_ARGSVAR(name); JUNK_LOG_FRAME_ARGSVAR(name) << L#arg L" = " << (arg)
+#define JUNK_LOG_FRAME_ARGS(arg) << L", " L#arg L" = " << (arg)
+#define JUNK_LOG_FRAME_COMMIT(name) ; jk::GlobalSocketLogger::Frame __jk_log_frame_ ## name ## __(L#name, JUNK_LOG_FRAME_ARGSVAR(name).str().c_str())
+
+#define JUNK_LOG_FUNC() JUNK_LOG_FUNC_BEGIN JUNK_LOG_FUNC_COMMIT
+#define JUNK_LOG_FUNC1(arg1) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_COMMIT
+#define JUNK_LOG_FUNC2(arg1, arg2) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_COMMIT
+#define JUNK_LOG_FUNC3(arg1, arg2, arg3) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_COMMIT
+#define JUNK_LOG_FUNC4(arg1, arg2, arg3, arg4) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_ARGS(arg4) JUNK_LOG_FUNC_COMMIT
+
+#define JUNK_LOG_FRAME(name) JUNK_LOG_FRAME_BEGIN(name) JUNK_LOG_FRAME_COMMIT(name)
+#define JUNK_LOG_FRAME1(name, arg1) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_COMMIT(name)
+#define JUNK_LOG_FRAME2(name, arg1, arg2) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_COMMIT(name)
+#define JUNK_LOG_FRAME3(name, arg1, arg2, arg3) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_COMMIT(name)
+#define JUNK_LOG_FRAME4(name, arg1, arg2, arg3, arg4) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_ARGS(arg4) JUNK_LOG_FRAME_COMMIT(name)
 
 _JUNK_END
 

@@ -83,6 +83,17 @@ std::wstring FilePath::Combine(const std::wstring& path1, const std::wstring& pa
 #endif
 }
 
+//! 2つの文字列を1つのパスに結合する
+std::string FilePath::Combine(const std::string& path1, const std::string& path2) {
+#if defined _MSC_VER
+	char buf[MAX_PATH] = "";
+	::PathCombineA(buf, path1.c_str(), path2.c_str());
+	return buf;
+#else
+#error gcc version is not implemented.
+#endif
+}
+
 //! 指定されたパス名のディレクトリ名部分を取得する
 std::wstring FilePath::GetDirectoryName(const std::wstring& path) {
 #if defined _MSC_VER
@@ -93,6 +104,22 @@ std::wstring FilePath::GetDirectoryName(const std::wstring& path) {
 	return std::move(std::wstring(drive) + dir);
 #else
 	return std::wstring(drive) + dir;
+#endif
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! 指定されたパス名のディレクトリ名部分を取得する
+std::string FilePath::GetDirectoryName(const std::string& path) {
+#if defined _MSC_VER
+	char drive[MAX_PATH] = "";
+	char dir[MAX_PATH] = "";
+	_splitpath_s(path.c_str(), drive, MAX_PATH, dir, MAX_PATH, NULL, 0, NULL, 0);
+#if 1700 <= _MSC_VER
+	return std::move(std::string(drive) + dir);
+#else
+	return std::string(drive) + dir;
 #endif
 #else
 #error gcc version is not implemented.
@@ -115,6 +142,22 @@ std::wstring FilePath::GetFileName(const std::wstring& path) {
 #endif
 }
 
+//! 指定したパス文字列のファイル名と拡張子を取得する
+std::string FilePath::GetFileName(const std::string& path) {
+#if defined _MSC_VER
+	char filename[MAX_PATH] = "";
+	char ext[MAX_PATH] = "";
+	_splitpath_s(path.c_str(), NULL, 0, NULL, 0, filename, MAX_PATH, ext, MAX_PATH);
+#if 1700 <= _MSC_VER
+	return std::move(std::string(filename) + ext);
+#else
+	return std::sstring(filename) + ext;
+#endif
+#else
+#error gcc version is not implemented.
+#endif
+}
+
 //! 指定したパス文字列の拡張子を取得する
 std::wstring FilePath::GetExtension(const std::wstring& path) {
 #if defined _MSC_VER
@@ -124,6 +167,21 @@ std::wstring FilePath::GetExtension(const std::wstring& path) {
 	return std::move(std::wstring(ext));
 #else
 	return std::wstring(ext);
+#endif
+#else
+#error gcc version is not implemented.
+#endif
+}
+
+//! 指定したパス文字列の拡張子を取得する
+std::string FilePath::GetExtension(const std::string& path) {
+#if defined _MSC_VER
+	char ext[MAX_PATH] = "";
+	_splitpath_s(path.c_str(), NULL, 0, NULL, 0, NULL, 0, ext, MAX_PATH);
+#if 1700 <= _MSC_VER
+	return std::move(std::string(ext));
+#else
+	return std::string(ext);
 #endif
 #else
 #error gcc version is not implemented.
