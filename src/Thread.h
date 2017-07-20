@@ -28,7 +28,7 @@ public:
 	typedef uintptr_t Handle; //!< スレッドハンドル型
 	typedef DWORD Id; //!< スレッドID型
 #endif
-	typedef intptr_t (*ProcPtr)(void*); //!< スレッド開始ルーチンポインタ
+	typedef intptr_t(*ProcPtr)(void*); //!< スレッド開始ルーチンポインタ
 
 	Thread(); //!< コンストラクタ
 	~Thread(); //!< デストラクタ
@@ -38,12 +38,12 @@ public:
 	static void Sleep(uint32_t msec); //!< 指定された時間現在のスレッドを停止する
 
 #if defined __GNUC__
-	//! 現在のスレッドIDの取得
+									  //! 現在のスレッドIDの取得
 	static _FINLINE Id CurrentThreadId() {
 		return pthread_self();
 	}
 #else
-	//! 現在のスレッドIDの取得
+									  //! 現在のスレッドIDの取得
 	static _FINLINE Id CurrentThreadId() {
 		return ::GetCurrentThreadId();
 	}
@@ -128,9 +128,108 @@ protected:
 #endif
 };
 
+//! Read-Write Lock パターンのロッククラス、Read は同時に複数実行できる
+template<
+	class _Sync //!< CriticalSection または Mutex を指定する
+>
+class ReadWriteLock {
+public:
+#if defined _MSC_VER
+	ReadWriteLock(intptr_t initialCount = 0, intptr_t maxCount = 0x7fffffff) {
+		m_nActiveReaders = 0;
+		m_nWaitingReaders = 0;
+		m_nActiveWriters = 0;
+		m_nWaitingWriters = 0;
+		m_hBlockedReader = ::CreateSemaphoreW(NULL, (long)initialCount, (long)maxCount, NULL);
+		m_hBlockedWriter = ::CreateSemaphoreW(NULL, (long)initialCount, (long)maxCount, NULL);
+	}
+	~ReadWriteLock() {
+		::CloseHandle(m_hBlockedReader);
+		::CloseHandle(m_hBlockedWriter);
+	}
+
+	void BeginReading() {
+		m_Sync.Lock();
+		if (m_nActiveWriters > 0 || m_nWaitingWriters > 0) {
+			m_nWaitingReaders++;
+			m_Sync.Unlock();
+			::WaitForSingleObject(m_hBlockedReader, -1);
+		} else {
+			m_nActiveReaders++;
+			m_Sync.Unlock();
+		}
+	}
+	void EndReading() {
+		m_Sync.Lock();
+		m_nActiveReaders--;
+		if (m_nActiveReaders == 0 && m_nWaitingWriters > 0) {
+			m_nActiveWriters = 1;
+			m_nWaitingWriters--;
+			::ReleaseSemaphore(m_hBlockedWriter, 1, 0);
+		}
+		m_Sync.Unlock();
+	}
+	void BeginWriting() {
+		m_Sync.Lock();
+		if (m_nActiveReaders == 0 && m_nActiveWriters == 0) {
+			m_nActiveWriters = 1;
+			m_Sync.Unlock();
+		} else {
+			m_nWaitingWriters++;
+			m_Sync.Unlock();
+			::WaitForSingleObject(m_hBlockedWriter, -1);
+		}
+	}
+	void EndWriting() {
+		m_Sync.Lock();
+		m_nActiveWriters = 0;
+		if (m_nWaitingReaders > 0) {
+			while (m_nWaitingReaders > 0) {
+				m_nWaitingReaders--;
+				m_nActiveReaders++;
+				::ReleaseSemaphore(m_hBlockedReader, 1, 0);
+			}
+		} else if (m_nWaitingWriters > 0) {
+			m_nWaitingWriters--;
+			::ReleaseSemaphore(m_hBlockedWriter, 1, 0);
+		}
+		m_Sync.Unlock();
+	}
+
+	int GetNumActiveReaders() {
+		Lock lb(&m_Sync);
+		return m_nActiveReaders;
+	}
+	int GetNumWaitingReaders() {
+		Lock lb(&m_Sync);
+		return m_nWaitingReaders;
+	}
+	int GetNumActiveWriters() {
+		Lock lb(&m_Sync);
+		return m_nActiveWriters;
+	}
+	int GetNumWaitingWriters() {
+		Lock lb(&m_Sync);
+		return m_nWaitingWriters;
+	}
+
+protected:
+	_Sync m_Sync;
+	HANDLE m_hBlockedReader;
+	HANDLE m_hBlockedWriter;
+	intptr_t m_nActiveReaders;
+	intptr_t m_nWaitingReaders;
+	intptr_t m_nActiveWriters;
+	intptr_t m_nWaitingWriters;
+#else
+#error gcc version is not implemented.
+#endif
+};
+
+
 //! 同期用オブジェクトロック＆アンロックヘルパ
 template<
-class _Sync //!< 同期用オブジェクト、Lock() と Unlock() メソッドを実装している必要がある
+	class _Sync //!< 同期用オブジェクト、Lock() と Unlock() メソッドを実装している必要がある
 >
 class JUNKAPICLASS Lock {
 public:
@@ -143,7 +242,7 @@ public:
 
 	//! デストラクタ、コンストラクタでロックされたオブジェクトをアンロックする
 	~Lock() {
-		if(pSync != NULL)
+		if (pSync != NULL)
 			pSync->Unlock();
 	}
 
@@ -158,6 +257,70 @@ public:
 
 protected:
 	_Sync* pSync; //!< 同期用オブジェクト、Lock() と Unlock() メソッドを実装している必要がある
+};
+
+//! 読み込み処理ロック＆アンロックヘルパ
+template<
+	class _Sync //!< 同期用オブジェクト、BeginReading() と EndReading() メソッドを実装している必要がある
+>
+class JUNKAPICLASS LockReading {
+public:
+	//! コンストラクタ、指定された同期オブジェクトをロックする
+	LockReading(_Sync* p) {
+		assert(p);
+		pSync = p;
+		pSync->BeginReading();
+	}
+
+	//! デストラクタ、コンストラクタでロックされたオブジェクトをアンロックする
+	~LockReading() {
+		if (pSync != NULL)
+			pSync->EndReading();
+	}
+
+	//! コンストラクタで指定された同期オブジェクトを切り離す、デストラクタでアンロックされなくなる
+	void Detach(bool unlock = false) {
+		if (pSync != NULL) {
+			if (unlock)
+				pSync->EndReading();
+			pSync = NULL;
+		}
+	}
+
+protected:
+	_Sync* pSync; //!< 同期用オブジェクト、BeginReading() と EndReading() メソッドを実装している必要がある
+};
+
+//! 書き込み処理ロック＆アンロックヘルパ
+template<
+	class _Sync //!< 同期用オブジェクト、BeginWriting() と EndWriting() メソッドを実装している必要がある
+>
+class JUNKAPICLASS LockWriting {
+public:
+	//! コンストラクタ、指定された同期オブジェクトをロックする
+	LockWriting(_Sync* p) {
+		assert(p);
+		pSync = p;
+		pSync->BeginWriting();
+	}
+
+	//! デストラクタ、コンストラクタでロックされたオブジェクトをアンロックする
+	~LockWriting() {
+		if (pSync != NULL)
+			pSync->EndWriting();
+	}
+
+	//! コンストラクタで指定された同期オブジェクトを切り離す、デストラクタでアンロックされなくなる
+	void Detach(bool unlock = false) {
+		if (pSync != NULL) {
+			if (unlock)
+				pSync->EndWriting();
+			pSync = NULL;
+		}
+	}
+
+protected:
+	_Sync* pSync; //!< 同期用オブジェクト、BeginWriting() と EndWriting() メソッドを実装している必要がある
 };
 
 typedef Lock<Mutex> MutexLock; //!< Mutex 用ロック
