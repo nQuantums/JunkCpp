@@ -232,6 +232,7 @@ void LogServer::Cleanup() {
 
 LogServer::LogServer() {
 	m_RequestStop = false;
+	m_CommandWriteLogHandler = NULL;
 }
 
 //! 別スレッドでサーバー処理を開始する、スレッドアンセーフ
@@ -373,12 +374,20 @@ void LogServer::CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& re
 	// テキストを登録
 	ss << std::string(((PktCommandLogWrite*)pCmd)->Text, ((PktCommandLogWrite*)pCmd)->Text + (pCmd->Size - sizeof(pCmd->Command)));
 
-	// ファイルへ書き込み
+	// ログテキストを取得
 #if 1700 <= _MSC_VER
 	std::string s = std::move(ss.str());
 #else
 	std::string s = ss.str();
 #endif
+
+	// ハンドラ呼び出し
+	CommandWriteLogHandler handler = m_CommandWriteLogHandler;
+	if (handler != NULL) {
+		handler(sock, (PktCommandLogWrite*)pCmd, remoteName.c_str(), s.c_str(), s.size());
+	}
+
+	// ファイルへ書き込み
 	Write(&s[0], s.size());
 
 	// 応答を返す
@@ -417,6 +426,16 @@ void LogServer::CommandFileClose(SocketRef sock, Pkt* pCmd) {
 	result.Size = sizeof(result.Result);
 	result.Result = ResultEnum::Ok;
 	sock.Send(&result, result.PacketSize());
+}
+
+//! CommandWriteLog 内から呼び出されるハンドラを設定する
+void LogServer::SetCommandWriteLogHandler(CommandWriteLogHandler handler) {
+	m_CommandWriteLogHandler = handler;
+}
+
+//! CommandWriteLog 内から呼び出されるハンドラを取得する
+LogServer::CommandWriteLogHandler LogServer::GetCommandWriteLogHandler() {
+	return m_CommandWriteLogHandler;
 }
 
 //! 接続受付スレッド開始アドレス

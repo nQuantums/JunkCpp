@@ -15,6 +15,9 @@ namespace LogViewer {
 		public bool Enter;
 		public string FrameName;
 
+        public int CachedPairIndex;
+        public int CachedParentIndex;
+
 		public override bool Equals(object obj) {
 			if (obj is Record) {
 				return this == (Record)obj;
@@ -56,6 +59,8 @@ namespace LogViewer {
 		public static bool TryParse(string line, out Record record) {
 			record = new Record();
 			var result = new Record();
+            result.CachedPairIndex = -1;
+            result.CachedParentIndex = -1;
 
 			// 日時解析
 			int start = 0;

@@ -76,6 +76,9 @@ public:
 	};
 #pragma pack(pop)
 
+	//! CommandWriteLog 内から呼び出されるハンドラ
+	typedef void (*CommandWriteLogHandler)(SocketRef sock, PktCommandLogWrite* pCmd, const char* pszRemoteName, const char* pszLogText, size_t logTextLen);
+
     static void Startup(); //!< ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
     static void Cleanup(); //!< 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
 
@@ -87,6 +90,9 @@ public:
 	void CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& remoteName); //!< ログ出力コマンド処理
 	void CommandFlush(SocketRef sock, Pkt* pCmd); //!< フラッシュコマンド処理
 	void CommandFileClose(SocketRef sock, Pkt* pCmd); //!< 現在のログファイルを閉じる
+
+	void SetCommandWriteLogHandler(CommandWriteLogHandler handler); //!< CommandWriteLog 内から呼び出されるハンドラを設定する
+	CommandWriteLogHandler GetCommandWriteLogHandler(); //!< CommandWriteLog 内から呼び出されるハンドラを取得する
 
 private:
 	//! クライアント毎の処理
@@ -122,6 +128,8 @@ private:
 
 	std::vector<Client*> m_Clients; //!< クライアント処理配列
 	CriticalSection m_ClientsCs; //!< m_Clients アクセス排他処理用
+
+	CommandWriteLogHandler m_CommandWriteLogHandler; //!< CommandWriteLog 内から呼び出されるハンドラ
 };
 
 #define JUNKLOG_DELIMITER (L',')

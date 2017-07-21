@@ -151,7 +151,7 @@ std::string FilePath::GetFileName(const std::string& path) {
 #if 1700 <= _MSC_VER
 	return std::move(std::string(filename) + ext);
 #else
-	return std::string(filename) + ext;
+	return std::sstring(filename) + ext;
 #endif
 #else
 #error gcc version is not implemented.

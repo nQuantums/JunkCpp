@@ -21,7 +21,41 @@ namespace LogViewer {
 		};
 		static int ColorIndex = 0;
 
-		public struct RecordRange {
+        /// <summary>
+        /// 処理キャンセル時の例外
+        /// </summary>
+        public class CancelException : ApplicationException
+        {
+            public CancelException()
+                : base()
+            {
+            }
+        }
+
+        /// <summary>
+        /// キャンセル情報
+        /// </summary>
+        public class CancelInfo
+        {
+            /// <summary>
+            /// キャンセルするなら true に設定される
+            /// </summary>
+            public volatile bool Cancel;
+
+            public static void Handle(CancelInfo cancelInfo)
+            {
+                if (cancelInfo == null)
+                    return;
+                var cancel = cancelInfo.Cancel;
+                if (cancel)
+                    throw new CancelException();
+            }
+        }
+
+        /// <summary>
+        /// 対象処理の開始～終了範囲
+        /// </summary>
+		public struct Frame {
 			public int StartIndex;
 			public int EndIndex;
 			public string Ip;
@@ -31,8 +65,8 @@ namespace LogViewer {
 			public Color Color;
 
 			public override bool Equals(object obj) {
-				if (obj is RecordRange) {
-					return this == (RecordRange)obj;
+				if (obj is Frame) {
+					return this == (Frame)obj;
 				}
 				return base.Equals(obj);
 			}
@@ -48,7 +82,7 @@ namespace LogViewer {
 				return hash;
 			}
 
-			public static bool operator ==(RecordRange a, RecordRange b) {
+			public static bool operator ==(Frame a, Frame b) {
 				if (a.StartIndex != b.StartIndex)
 					return false;
 				if (a.EndIndex != b.EndIndex)
@@ -64,62 +98,312 @@ namespace LogViewer {
 				return true;
 			}
 
-			public static bool operator !=(RecordRange a, RecordRange b) {
+			public static bool operator !=(Frame a, Frame b) {
 				return !(a == b);
 			}
-		}
+
+
+            /// <summary>
+            /// 指定レコード配列内の指定インデックスのレコードに対応するフレームを検索する
+            /// </summary>
+            /// <param name="records">全レコード配列</param>
+            /// <param name="index">検索対象レコードインデックス</param>
+            /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
+            /// <returns>フレーム</returns>
+            public static Frame Search(Record[] records, int index, CancelInfo cancelInfo)
+            {
+                if (index < 0 || records.Length <= index)
+                    return new Frame();
+
+                var curRecord = records[index];
+                var frame = new Frame();
+                frame.StartIndex = index;
+                frame.EndIndex = index;
+                frame.Ip = curRecord.Ip;
+                frame.Pid = curRecord.Pid;
+                frame.Tid = curRecord.Tid;
+                frame.Depth = curRecord.Depth;
+
+                // キャッシュにペアインデックスが記録されているならそっちを使用
+                if (0 <= curRecord.CachedPairIndex)
+                {
+                    if (curRecord.Enter)
+                    {
+                        frame.EndIndex = curRecord.CachedPairIndex;
+                    }
+                    else
+                    {
+                        frame.StartIndex = curRecord.CachedPairIndex;
+                    }
+                    return frame;
+                }
+
+                // 開始または終了レコードを探す
+                if (curRecord.Enter)
+                {
+                    for (int i = index + 1; i < records.Length; i++)
+                    {
+                        CancelInfo.Handle(cancelInfo);
+
+                        var r = records[i];
+                        if (r.Ip != frame.Ip)
+                            continue;
+                        if (r.Pid != frame.Pid)
+                            continue;
+                        if (r.Tid != frame.Tid)
+                            continue;
+                        if (r.Depth < frame.Depth)
+                            break;
+                        frame.EndIndex = i;
+                        if (r.Depth == frame.Depth && !r.Enter)
+                            break;
+                    }
+                    records[index].CachedPairIndex = frame.EndIndex;
+                }
+                else
+                {
+                    for (int i = index - 1; i != -1; i--)
+                    {
+                        CancelInfo.Handle(cancelInfo);
+
+                        var r = records[i];
+                        if (r.Ip != frame.Ip)
+                            continue;
+                        if (r.Pid != frame.Pid)
+                            continue;
+                        if (r.Tid != frame.Tid)
+                            continue;
+                        if (r.Depth < frame.Depth)
+                            break;
+                        frame.StartIndex = i;
+                        if (r.Depth == frame.Depth && r.Enter)
+                            break;
+                    }
+                    records[index].CachedPairIndex = frame.StartIndex;
+                }
+
+                return frame;
+            }
+
+            /// <summary>
+            /// 指定フレームの呼び出し元レコードインデックスを検索する
+            /// </summary>
+            /// <param name="records">全レコード配列</param>
+            /// <param name="frame">対象フレーム</param>
+            /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
+            /// <returns>レコードインデックス</returns>
+            public static int SearchParentIndex(Record[] records, Frame frame, CancelInfo cancelInfo)
+            {
+                if (frame.Depth == 0)
+                    return frame.StartIndex;
+
+                // 親インデックスがキャッシュに記録されているならそっちを使用
+                var parentIndex = records[frame.StartIndex].CachedParentIndex;
+                if (0 <= parentIndex)
+                    return parentIndex;
+
+                // 呼び出し元なので深度をデクリメント
+                frame.Depth--;
+
+                for (int i = frame.StartIndex - 1; i != -1; i--)
+                {
+                    CancelInfo.Handle(cancelInfo);
+
+                    var r = records[i];
+                    if (r.Ip != frame.Ip)
+                        continue;
+                    if (r.Pid != frame.Pid)
+                        continue;
+                    if (r.Tid != frame.Tid)
+                        continue;
+                    if (r.Depth < frame.Depth)
+                        break;
+                    if (r.Depth == frame.Depth && r.Enter)
+                    {
+                        records[frame.StartIndex].CachedParentIndex = i;
+                        records[frame.EndIndex].CachedParentIndex = i;
+                        return i;
+                    }
+                }
+
+                // 見つからなかったので現在フレームの開始を返しておく
+                records[frame.StartIndex].CachedParentIndex = frame.StartIndex;
+                records[frame.EndIndex].CachedParentIndex = frame.StartIndex;
+                return frame.StartIndex;
+            }
+
+            /// <summary>
+            /// 指定フレームの最初の呼び出し先レコードインデックスを検索する
+            /// </summary>
+            /// <param name="records">全レコード配列</param>
+            /// <param name="frame">対象フレーム</param>
+            /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
+            /// <returns>レコードインデックス</returns>
+            public static int SearchChildIndex(Record[] records, Frame frame, CancelInfo cancelInfo)
+            {
+                if (frame.Depth == 0)
+                    return frame.StartIndex;
+
+                // 呼び出し先なので深度をインクリメント
+                frame.Depth++;
+
+                for (int i = frame.StartIndex + 1; i < frame.EndIndex; i++)
+                {
+                    CancelInfo.Handle(cancelInfo);
+
+                    var r = records[i];
+                    if (r.Ip != frame.Ip)
+                        continue;
+                    if (r.Pid != frame.Pid)
+                        continue;
+                    if (r.Tid != frame.Tid)
+                        continue;
+                    if (r.Depth == frame.Depth && r.Enter)
+                        return i;
+                }
+
+                // 見つからなかったので現在フレームの開始を返しておく
+                return frame.StartIndex;
+            }
+
+
+            /// <summary>
+            /// 指定フレームの次の処理の開始レコードを検索する ※同スレッド内の次の処理に相当
+            /// </summary>
+            /// <param name="records">全レコード配列</param>
+            /// <param name="frame">対象フレーム</param>
+            /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
+            /// <returns>レコードインデックス</returns>
+            public static int SearchNextIndex(Record[] records, Frame frame, CancelInfo cancelInfo)
+            {
+                var callerFrame = Search(records, SearchParentIndex(records, frame, cancelInfo), cancelInfo);
+
+                for (int i = frame.EndIndex + 1; i < callerFrame.EndIndex; i++)
+                {
+                    CancelInfo.Handle(cancelInfo);
+
+                    var r = records[i];
+                    if (r.Ip != frame.Ip)
+                        continue;
+                    if (r.Pid != frame.Pid)
+                        continue;
+                    if (r.Tid != frame.Tid)
+                        continue;
+                    if (r.Depth == frame.Depth && r.Enter)
+                        return i;
+                }
+
+                return frame.EndIndex;
+            }
+
+            /// <summary>
+            /// 指定フレームの前の処理の開始レコードを検索する ※同スレッド内の前の処理に相当
+            /// </summary>
+            /// <param name="records">全レコード配列</param>
+            /// <param name="frame">対象フレーム</param>
+            /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
+            /// <returns>レコードインデックス</returns>
+            public static int SearchPrevIndex(Record[] records, Frame frame, CancelInfo cancelInfo)
+            {
+                var callerFrame = Search(records, SearchParentIndex(records, frame, cancelInfo), cancelInfo);
+
+                for (int i = frame.StartIndex - 1; callerFrame.StartIndex < i; i--)
+                {
+                    CancelInfo.Handle(cancelInfo);
+
+                    var r = records[i];
+                    if (r.Ip != frame.Ip)
+                        continue;
+                    if (r.Pid != frame.Pid)
+                        continue;
+                    if (r.Tid != frame.Tid)
+                        continue;
+                    if (r.Depth == frame.Depth && r.Enter)
+                        return i;
+                }
+
+                return frame.StartIndex;
+            }
+
+            /// <summary>
+            /// 指定フレームのコールスタックテキストを作成する
+            /// </summary>
+            /// <param name="records">全レコード配列</param>
+            /// <param name="frame">対象フレーム</param>
+            /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
+            /// <returns>コールスタックテキスト</returns>
+            public static string GetCallStackText(Record[] records, Frame frame, CancelInfo cancelInfo)
+            {
+                var frameRecords = new List<Record>();
+                frameRecords.Add(records[frame.StartIndex]);
+
+                var f = frame;
+                for (; ; )
+                {
+                    var index = SearchParentIndex(records, f, cancelInfo);
+                    if (index == f.StartIndex)
+                        break;
+                    f = Search(records, index, cancelInfo);
+                    frameRecords.Add(records[f.StartIndex]);
+                }
+
+                var sb = new StringBuilder();
+                for (int i = frameRecords.Count - 1; i != -1; i--)
+                {
+                    var r = frameRecords[i];
+                    sb.AppendLine(new string(' ', r.Depth * 4) + r.FrameName);
+                }
+
+                return sb.ToString();
+            }
+        }
 
 		string _CsvFileName;
 		Record[] _Records = new Record[0];
 		Record[] _Interrupts = new Record[0];
-		RecordRange _Range;
-		List<RecordRange> _Ranges = new List<RecordRange>();
+		Frame _CurrentFrame;
+		List<Frame> _MarkedFrames = new List<Frame>();
 
-		public RecordRange Range {
+        /// <summary>
+        /// 現在対象となるフレーム
+        /// </summary>
+		public Frame CurrentFrame {
 			get {
-				return _Range;
+				return _CurrentFrame;
 			}
 			set {
-				if (_Range == value)
+				if (_CurrentFrame == value)
 					return;
 
-				int start = Math.Min(value.StartIndex, _Range.StartIndex);
-				int end = Math.Max(value.EndIndex, _Range.EndIndex);
-				_Range = value;
-				_Range.Color = Color.FromArgb(192, 200, 255);
-				AfterFilterChange(start, end);
+                // 変更行範囲取得
+                int start = int.MinValue;
+                int end = int.MinValue;
+                if (_CurrentFrame.Depth != 0)
+                {
+                    start = _CurrentFrame.StartIndex;
+                    end = _CurrentFrame.EndIndex;
+                }
+                if (value.Depth != 0)
+                {
+                    start = start != int.MinValue ? Math.Min(start, value.StartIndex) : value.StartIndex;
+                    end = end != int.MinValue ? Math.Min(end, value.EndIndex) : value.EndIndex;
+                }
 
-				SetInterrupts(QueryInterrupts(_Range).ToArray());
+                // 値更新
+                _CurrentFrame = value;
+				_CurrentFrame.Color = Color.FromArgb(192, 200, 255);
+
+                // 変更される行範囲があれば変更を予約する
+                if (start != int.MinValue && end != int.MinValue)
+                    UpdateRecordsListItem(start, end);
+
+                // 現在フレーム実行中に割り込まれた他スレッドの処理を表示
+				SetInterrupts(QueryInterrupts(_CurrentFrame).ToArray());
+                // コールスタックを表示
+                this.tbCallStack.Text = Frame.GetCallStackText(GetRecords(), _CurrentFrame, null);
 			}
 		}
 
-		public void AddRange(RecordRange range) {
-			range.Color = ColorTable[ColorIndex++ % ColorTable.Length];
-			_Ranges.Add(range);
-			AfterFilterChange(range.StartIndex, range.EndIndex);
-
-			var lvi = new ListViewItem();
-			lvi.UseItemStyleForSubItems = false;
-			lvi.Text = (range.StartIndex + 1).ToString() + "～" + (range.EndIndex + 1).ToString();
-			lvi.SubItems.Add("");
-			lvi.SubItems.Add(range.Ip);
-			lvi.SubItems.Add(range.Pid.ToString());
-			lvi.SubItems.Add(range.Tid.ToString());
-			lvi.SubItems.Add(GetRecords()[range.StartIndex].FrameName);
-			lvi.SubItems[1].BackColor = range.Color;
-			this.lvSelRanges.Items.Add(lvi);
-		}
-
-		public void RemoveRangeAt(int index) {
-			if (index < 0 || _Ranges.Count <= index)
-				return;
-
-			var range = _Ranges[index];
-			_Ranges.RemoveAt(index);
-			AfterFilterChange(range.StartIndex, range.EndIndex);
-
-			this.lvSelRanges.Items.RemoveAt(index);
-		}
 
 		public Form1() {
 			InitializeComponent();
@@ -133,6 +417,7 @@ namespace LogViewer {
 			this.lvRecords.VirtualMode = true;
 			this.lvRecords.RetrieveVirtualItem += LvRecords_RetrieveVirtualItem;
 			this.lvRecords.SelectedIndexChanged += LvRecords_SelectedIndexChanged;
+            this.lvRecords.KeyDown += lvRecords_KeyDown;
 
 			this.lvInterrupts.GetType().InvokeMember(
 			   "DoubleBuffered",
@@ -155,9 +440,50 @@ namespace LogViewer {
 			}
 		}
 
+        /// <summary>
+        /// 現在のレコード配列の取得
+        /// </summary>
 		public Record[] GetRecords() {
 			return _Records;
 		}
+
+        /// <summary>
+        /// マークするフレームの追加
+        /// </summary>
+        /// <param name="range">フレーム</param>
+        public void AddMarkedFrame(Frame range)
+        {
+            range.Color = ColorTable[ColorIndex++ % ColorTable.Length];
+            _MarkedFrames.Add(range);
+            UpdateRecordsListItem(range.StartIndex, range.EndIndex);
+
+            var lvi = new ListViewItem();
+            lvi.UseItemStyleForSubItems = false;
+            lvi.Text = (range.StartIndex + 1).ToString() + "～" + (range.EndIndex + 1).ToString();
+            lvi.SubItems.Add("");
+            lvi.SubItems.Add(range.Ip);
+            lvi.SubItems.Add(range.Pid.ToString());
+            lvi.SubItems.Add(range.Tid.ToString());
+            lvi.SubItems.Add(GetRecords()[range.StartIndex].FrameName);
+            lvi.SubItems[1].BackColor = range.Color;
+            this.lvSelRanges.Items.Add(lvi);
+        }
+
+        /// <summary>
+        /// マークするフレームの削除
+        /// </summary>
+        /// <param name="index">範囲インデックス</param>
+        public void RemoveMarkedFrameAt(int index)
+        {
+            if (index < 0 || _MarkedFrames.Count <= index)
+                return;
+
+            var range = _MarkedFrames[index];
+            _MarkedFrames.RemoveAt(index);
+            UpdateRecordsListItem(range.StartIndex, range.EndIndex);
+
+            this.lvSelRanges.Items.RemoveAt(index);
+        }
 
 		void SetInterrupts(Record[] records) {
 			this.lvInterrupts.BeginUpdate();
@@ -174,60 +500,7 @@ namespace LogViewer {
 			return _Interrupts;
 		}
 
-		public RecordRange GetDepthRange() {
-			var si = this.lvRecords.SelectedIndices;
-			if (si.Count == 0)
-				return new RecordRange();
-			return SearchRange(si[0]);
-		}
-
-		public RecordRange SearchRange(int index) {
-			var records = GetRecords();
-			var curRecord = records[index];
-			var range = new RecordRange();
-			range.StartIndex = index;
-			range.EndIndex = index;
-			range.Ip = curRecord.Ip;
-			range.Pid = curRecord.Pid;
-			range.Tid = curRecord.Tid;
-			range.Depth = curRecord.Depth;
-
-			if (curRecord.Enter) {
-				for (int i = index + 1; i < records.Length; i++) {
-					var r = records[i];
-					if (r.Ip != range.Ip)
-						continue;
-					if (r.Pid != range.Pid)
-						continue;
-					if (r.Tid != range.Tid)
-						continue;
-					if (r.Depth < range.Depth)
-						break;
-					range.EndIndex = i;
-					if (r.Depth == range.Depth && !r.Enter)
-						break;
-				}
-			} else {
-				for (int i = index - 1; i != -1; i--) {
-					var r = records[i];
-					if (r.Ip != range.Ip)
-						continue;
-					if (r.Pid != range.Pid)
-						continue;
-					if (r.Tid != range.Tid)
-						continue;
-					if (r.Depth < range.Depth)
-						break;
-					range.StartIndex = i;
-					if (r.Depth == range.Depth && r.Enter)
-						break;
-				}
-			}
-
-			return range;
-		}
-
-		public HashSet<Record> QueryInterrupts(RecordRange range) {
+        public HashSet<Record> QueryInterrupts(Frame range) {
 			var result = new HashSet<Record>();
 			var records = GetRecords();
 			for (int i = range.StartIndex + 1; i < range.EndIndex; i++) {
@@ -242,99 +515,36 @@ namespace LogViewer {
 			return result;
 		}
 
-		public int SearchSourceIndex() {
-			var range = this.Range;
-			if (range.Depth == 0)
-				return range.StartIndex;
+        public Frame SearchCurrentFrame()
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return new Frame();
+            return Frame.Search(GetRecords(), si[0], null);
+        }
 
-			var records = GetRecords();
-			var index = range.StartIndex;
-
-			range.Depth--;
-
-			for (int i = index - 1; i != -1; i--) {
-				var r = records[i];
-				if (r.Ip != range.Ip)
-					continue;
-				if (r.Pid != range.Pid)
-					continue;
-				if (r.Tid != range.Tid)
-					continue;
-				if (r.Depth < range.Depth)
-					break;
-				if (r.Depth == range.Depth && r.Enter)
-					return i;
-			}
-
-			return index;
+		public int SearchParentIndex() {
+            return Frame.SearchParentIndex(GetRecords(), this.CurrentFrame, null);
 		}
 
-		public int SearchDestIndex() {
-			var range = this.Range;
-			if (range.Depth == 0)
-				return range.StartIndex;
-
-			var records = GetRecords();
-			var index = range.StartIndex;
-
-			range.Depth++;
-
-			for (int i = index + 1; i < range.EndIndex; i++) {
-				var r = records[i];
-				if (r.Ip != range.Ip)
-					continue;
-				if (r.Pid != range.Pid)
-					continue;
-				if (r.Tid != range.Tid)
-					continue;
-				if (r.Depth == range.Depth && r.Enter)
-					return i;
-			}
-
-			return index;
-		}
+		public int SearchChildIndex() {
+            return Frame.SearchChildIndex(GetRecords(), this.CurrentFrame, null);
+        }
 
 		public int SearchNextIndex() {
-			var range = this.Range;
-			var sourceRange = SearchRange(SearchSourceIndex());
-			var records = GetRecords();
-
-			for (int i = range.EndIndex + 1; i < sourceRange.EndIndex; i++) {
-				var r = records[i];
-				if (r.Ip != range.Ip)
-					continue;
-				if (r.Pid != range.Pid)
-					continue;
-				if (r.Tid != range.Tid)
-					continue;
-				if (r.Depth == range.Depth && r.Enter)
-					return i;
-			}
-
-			return range.EndIndex;
-		}
+            return Frame.SearchNextIndex(GetRecords(), this.CurrentFrame, null);
+        }
 
 		public int SearchPrevIndex() {
-			var range = this.Range;
-			var sourceRange = SearchRange(SearchSourceIndex());
-			var records = GetRecords();
+            return Frame.SearchPrevIndex(GetRecords(), this.CurrentFrame, null);
+        }
 
-			for (int i = range.StartIndex - 1; sourceRange.StartIndex < i; i--) {
-				var r = records[i];
-				if (r.Ip != range.Ip)
-					continue;
-				if (r.Pid != range.Pid)
-					continue;
-				if (r.Tid != range.Tid)
-					continue;
-				if (r.Depth == range.Depth && r.Enter)
-					return i;
-			}
-
-			return range.StartIndex;
-		}
-
-		void AfterFilterChange(int start = -1, int end = -1) {
+        /// <summary>
+        /// レコード表示を更新する
+        /// </summary>
+        /// <param name="start">更新開始レコードインデックス</param>
+        /// <param name="end">更新終了レコードインデックス</param>
+		void UpdateRecordsListItem(int start = -1, int end = -1) {
 			if (start < 0)
 				start = 0;
 			if (end < 0 || this.lvRecords.VirtualListSize <= end)
@@ -344,6 +554,14 @@ namespace LogViewer {
 			this.lvRecords.RedrawItems(start, end, true);
 		}
 
+        /// <summary>
+        /// レコード検索
+        /// </summary>
+        /// <param name="forward">進みながら検索するなら true</param>
+        /// <param name="ip">検索対象IP、 null が指定されたらIPで絞らない</param>
+        /// <param name="pid">検索対象プロセスID、0 が指定されたらIPで絞らない</param>
+        /// <param name="pid">検索対象スレッドID、0 が指定されたらIPで絞らない</param>
+        /// <param name="method">検索対象処理内容文字列、大小無視で部分一致で検索される、null が指定されたら絞らない</param>
 		void Search(bool forward, string ip, UInt32 pid, UInt32 tid, string method) {
 			var si = this.lvRecords.SelectedIndices;
 			var startIndex = si.Count != 0 ? si[0] : -1;
@@ -372,6 +590,114 @@ namespace LogViewer {
 			}
 		}
 
+        /// <summary>
+        /// 現在の検索設定でレコード検索
+        /// </summary>
+        /// <param name="forward">進みながら検索するなら true</param>
+        void Search(bool forward)
+        {
+            string ip;
+            UInt32 pid;
+            UInt32 tid;
+            string method;
+
+            ip = this.tbIp.Text;
+            if (string.IsNullOrEmpty(ip))
+                ip = null;
+            method = this.tbMethod.Text;
+            if (string.IsNullOrEmpty(method))
+                method = null;
+            UInt32.TryParse(this.tbPid.Text, out pid);
+            UInt32.TryParse(this.tbTid.Text, out tid);
+
+            Search(forward, ip, pid, tid, method);
+        }
+
+        void MoveFrameEnterLeave(int mode)
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return;
+
+            var frame = this.CurrentFrame;
+            int index;
+
+            switch (mode)
+            {
+                case 0:
+                default:
+                    index = si[0] == frame.StartIndex ? frame.EndIndex : frame.StartIndex;
+                    break;
+                case 1:
+                    index = frame.StartIndex;
+                    break;
+                case 2:
+                    index = frame.EndIndex;
+                    break;
+            }
+
+            si.Clear();
+            si.Add(index);
+            this.lvRecords.Items[index].Focused = true;
+            this.lvRecords.EnsureVisible(index);
+        }
+
+        void MoveFrameParent()
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return;
+
+            var index = SearchParentIndex();
+
+            si.Clear();
+            si.Add(index);
+            this.lvRecords.Items[index].Focused = true;
+            this.lvRecords.EnsureVisible(index);
+        }
+
+        void MoveFrameChild()
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return;
+
+            var index = SearchChildIndex();
+
+            si.Clear();
+            si.Add(index);
+            this.lvRecords.Items[index].Focused = true;
+            this.lvRecords.EnsureVisible(index);
+        }
+
+        void MoveFrameNext()
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return;
+
+            var index = SearchNextIndex();
+
+            si.Clear();
+            si.Add(index);
+            this.lvRecords.Items[index].Focused = true;
+            this.lvRecords.EnsureVisible(index);
+        }
+
+        void MoveFramePrev()
+        {
+            var si = this.lvRecords.SelectedIndices;
+            if (si.Count == 0)
+                return;
+
+            var index = SearchPrevIndex();
+
+            si.Clear();
+            si.Add(index);
+            this.lvRecords.Items[index].Focused = true;
+            this.lvRecords.EnsureVisible(index);
+        }
+
 		private void tsmiOpen_Click(object sender, EventArgs e) {
 			//OpenFileDialogクラスのインスタンスを作成
 			using (var ofd = new OpenFileDialog()) {
@@ -393,32 +719,18 @@ namespace LogViewer {
 		}
 
 		private void btnSearch_Click(object sender, EventArgs e) {
-			string ip;
-			UInt32 pid;
-			UInt32 tid;
-			string method;
-
-			ip = this.tbIp.Text;
-			if (string.IsNullOrEmpty(ip))
-				ip = null;
-			method = this.tbMethod.Text;
-			if (string.IsNullOrEmpty(method))
-				method = null;
-			UInt32.TryParse(this.tbPid.Text, out pid);
-			UInt32.TryParse(this.tbTid.Text, out tid);
-
-			Search(sender == this.btnSearchForward, ip, pid, tid, method);
+			Search(sender == this.btnSearchForward);
 		}
 
 		private void btnSelAdd_Click(object sender, EventArgs e) {
-			AddRange(this.Range);
+			AddMarkedFrame(this.CurrentFrame);
 		}
 
 		private void btnSelDel_Click(object sender, EventArgs e) {
 			var si = this.lvSelRanges.SelectedIndices;
 			if (si.Count == 0)
 				return;
-			RemoveRangeAt(si[0]);
+			RemoveMarkedFrameAt(si[0]);
 		}
 
 		private void lvSelRanges_DoubleClick(object sender, EventArgs e) {
@@ -426,80 +738,88 @@ namespace LogViewer {
 			if (si.Count == 0)
 				return;
 			var index = si[0];
-			if (index < 0 || _Ranges.Count <= index)
+			if (index < 0 || _MarkedFrames.Count <= index)
 				return;
 
-			var range = _Ranges[index];
+			var range = _MarkedFrames[index];
 			this.lvRecords.EnsureVisible(range.StartIndex);
 		}
 
 		private void btnJunpEnterLeave_Click(object sender, EventArgs e) {
-			var si = this.lvRecords.SelectedIndices;
-			if (si.Count == 0)
-				return;
-
-			var range = this.Range;
-			var index = si[0] == range.StartIndex ? range.EndIndex : range.StartIndex;
-
-			si.Clear();
-			si.Add(index);
-			this.lvRecords.EnsureVisible(index);
+            MoveFrameEnterLeave(0);
 		}
 
 		private void btnJumpSource_Click(object sender, EventArgs e) {
-			var si = this.lvRecords.SelectedIndices;
-			if (si.Count == 0)
-				return;
-
-			var index = SearchSourceIndex();
-
-			si.Clear();
-			si.Add(index);
-			this.lvRecords.EnsureVisible(index);
-
+            MoveFrameParent();
 		}
 
 		private void btnJumpDest_Click(object sender, EventArgs e) {
-			var si = this.lvRecords.SelectedIndices;
-			if (si.Count == 0)
-				return;
-
-			var index = SearchDestIndex();
-
-			si.Clear();
-			si.Add(index);
-			this.lvRecords.EnsureVisible(index);
+            MoveFrameChild();
 		}
 
 		private void btnJumpNext_Click(object sender, EventArgs e) {
-			var si = this.lvRecords.SelectedIndices;
-			if (si.Count == 0)
-				return;
-
-			var index = SearchNextIndex();
-
-			si.Clear();
-			si.Add(index);
-			this.lvRecords.EnsureVisible(index);
+            MoveFrameNext();
 		}
 
 		private void btnJumpPrev_Click(object sender, EventArgs e) {
-			var si = this.lvRecords.SelectedIndices;
-			if (si.Count == 0)
-				return;
-
-			var index = SearchPrevIndex();
-
-			si.Clear();
-			si.Add(index);
-			this.lvRecords.EnsureVisible(index);
+            MoveFramePrev();
 		}
 
 		private void LvRecords_SelectedIndexChanged(object sender, EventArgs e) {
-			this.Range = GetDepthRange();
+			this.CurrentFrame = SearchCurrentFrame();
 		}
 
-		private void LvRecords_RetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e) {
+        void lvRecords_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control)
+            {
+                if (e.KeyCode == Keys.Up)
+                {
+                    MoveFramePrev();
+                    e.Handled = true;
+                } else if (e.KeyCode == Keys.Down)
+                {
+                    MoveFrameNext();
+                    e.Handled = true;
+                }
+                else if (e.KeyCode == Keys.Left)
+                {
+                    MoveFrameParent();
+                    e.Handled = true;
+                }
+                else if (e.KeyCode == Keys.Right)
+                {
+                    MoveFrameChild();
+                    e.Handled = true;
+                }
+            }
+            else if (e.Shift)
+            {
+                if (e.KeyCode == Keys.Up)
+                {
+                    MoveFrameEnterLeave(1);
+                    e.Handled = true;
+                }
+                else if (e.KeyCode == Keys.Down)
+                {
+                    MoveFrameEnterLeave(2);
+                    e.Handled = true;
+                }
+            }
+            else
+            {
+                if (e.KeyCode == Keys.F3)
+                {
+                    Search(true);
+                }
+                else if (e.KeyCode == Keys.F4)
+                {
+                    Search(false);
+                }
+            }
+        }
+
+        private void LvRecords_RetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e) {
 			var records = GetRecords();
 			var index = e.ItemIndex;
 			if (records.Length <= index)
@@ -517,12 +837,15 @@ namespace LogViewer {
 			e.Item.SubItems.Add(record.Enter ? "Enter" : "Leave");
 			e.Item.SubItems.Add(new string('　', record.Depth) + record.FrameName);
 
-			for (int sel = _Ranges.Count; sel != -1; sel--) {
-				var range = sel == _Ranges.Count ? this.Range : _Ranges[sel];
-				if (range.Ip == record.Ip && range.Pid == record.Pid && range.Tid == record.Tid) {
-					if (range.StartIndex <= index && index <= range.EndIndex) {
-						for (int i = 0; i < e.Item.SubItems.Count; i++)
-							e.Item.SubItems[i].BackColor = range.Color;
+			for (int sel = _MarkedFrames.Count; sel != -1; sel--) {
+				var frame = sel == _MarkedFrames.Count ? this.CurrentFrame : _MarkedFrames[sel];
+				if (frame.Ip == record.Ip && frame.Pid == record.Pid && frame.Tid == record.Tid) {
+					if (frame.StartIndex <= index && index <= frame.EndIndex) {
+                        var n = e.Item.SubItems.Count;
+                        if (index != frame.StartIndex || index != frame.EndIndex)
+                            n--;
+						for (int i = 0; i < n; i++)
+							e.Item.SubItems[i].BackColor = frame.Color;
 						break;
 					}
 				}

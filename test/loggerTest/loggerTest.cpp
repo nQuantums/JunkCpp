@@ -34,10 +34,26 @@ int main(int argc, char *argv[]) {
 }
 
 
+static std::string g_MethodToHandle = "\"+: Struct1::Func4(";
+
+void CommandWriteLogHandler(jk::SocketRef sock, jk::LogServer::PktCommandLogWrite* pCmd, const char* pszRemoteName, const char* pszLogText, size_t logTextLen) {
+	char* pszMethodPos = strchr(pCmd->Text, '"');
+	if (pszMethodPos == NULL)
+		return;
+	if (strncmp(pszMethodPos, g_MethodToHandle.c_str(), g_MethodToHandle.size()) != 0)
+		return;
+
+	std::cout << "Locking: " << pszLogText << std::endl;
+	::Sleep(1000);
+}
+
 bool LogServerTest() {
 	jk::LogServer::Startup();
 
 	jk::LogServer server;
+
+	server.SetCommandWriteLogHandler(CommandWriteLogHandler);
+
 	if (!server.Start(L"Logs", 33777)) {
 		std::cerr << "Failed to start log server." << std::endl;
 		return false;
@@ -62,14 +78,14 @@ bool LogServerTest() {
 struct Struct1 {
 	void Func() {
 		JUNK_LOG_FUNC();
-		jk::Thread::Sleep(100);
+		//jk::Thread::Sleep(100);
 		{
 			JUNK_LOG_FRAME(Frame);
 		}
 	}
 	void Func1(int a) {
 		JUNK_LOG_FUNC1(a);
-		jk::Thread::Sleep(100);
+		//jk::Thread::Sleep(100);
 		Func2(a, a * 2);
 		{
 			JUNK_LOG_FRAME1(Frame, a);
@@ -77,7 +93,7 @@ struct Struct1 {
 	}
 	void Func2(int a, int b) {
 		JUNK_LOG_FUNC2(a, b);
-		jk::Thread::Sleep(100);
+		//jk::Thread::Sleep(100);
 		Func3(a, b, b * 2);
 		{
 			JUNK_LOG_FRAME2(Frame, a, b);
@@ -85,7 +101,7 @@ struct Struct1 {
 	}
 	void Func3(int a, int b, int c) {
 		JUNK_LOG_FUNC3(a, b, c);
-		jk::Thread::Sleep(100);
+		//jk::Thread::Sleep(100);
 		for (int i = 0; i < 10; i++)
 			Func4(a, b, c, c * 2);
 		{
@@ -94,7 +110,7 @@ struct Struct1 {
 	}
 	void Func4(int a, int b, int c, int d) {
 		JUNK_LOG_FUNC4(a, b, c, d);
-		jk::Thread::Sleep(100);
+		//jk::Thread::Sleep(100);
 		{
 			JUNK_LOG_FRAME4(Frame, a, b, c, d);
 		}
