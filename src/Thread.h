@@ -115,7 +115,7 @@ public:
 	~Event(); // デストラクタ
 	void Set(); //!< イベントをシグナル状態にする
 	void Reset(); //!< イベントを非シグナル状態にする
-	ibool Wait(); //!< イベントがシグナル状態になるのを待つ
+	ibool Wait(intptr_t timeoutMs = -1); //!< イベントがシグナル状態になるのを待つ
 	void Initialize(); //!< コンストラクタと同じように内部オブジェクトを初期化する
 	void Destroy(); //!< デストラクタと同じように内部オブジェクトを破棄する
 

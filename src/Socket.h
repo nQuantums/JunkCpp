@@ -363,6 +363,32 @@ struct JUNKAPICLASS SocketRef {
 		return connect(m_hSock, ai->ai_addr, ai->ai_addrlen) == 0;
 	}
 
+	//! 指定の Endpoint に接続する
+	bool Connect(const Endpoint& endpoint, int index, int64_t timeoutMs) {
+		unsigned long iMode = 1;
+		int iResult = ioctlsocket(m_hSock, FIONBIO, &iMode);
+		if (iResult != NO_ERROR)
+			return false;
+
+		if (!Connect(endpoint, index))
+			return false;
+
+		iMode = 0;
+		iResult = ioctlsocket(m_hSock, FIONBIO, &iMode);
+		if (iResult != NO_ERROR)
+			return false;
+ 
+		fd_set Write, Err;
+		FD_ZERO(&Write);
+		FD_ZERO(&Err);
+		FD_SET(m_hSock, &Write);
+		FD_SET(m_hSock, &Err);
+
+		timeval tv = MsToTimeval(timeoutMs);
+		select(0, NULL, &Write, &Err, &tv);			
+		return FD_ISSET(m_hSock, &Write) != 0;
+	}
+
 	//! ソケットを指定ポートにバインドする
 	bool Bind(int port) {
 		sockaddr_in addr;

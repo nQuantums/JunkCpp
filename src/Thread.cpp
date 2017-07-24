@@ -269,14 +269,18 @@ void Event::Reset() {
 }
 
 //! イベントがシグナル状態になるのを待つ
-ibool Event::Wait() {
+ibool Event::Wait(intptr_t timeoutMs) {
 #if defined __GNUC__
 	pthread_mutex_lock(&m_lock);
-	pthread_cond_wait(&m_ready, &m_lock);
-	return true;
+	int check_value;
+	if (timeoutMs == -1) {
+		check_value = pthread_cond_wait(&m_ready, &m_lock);
+	} else {
+		check_value = pthread_cond_timedwait(&m_ready, &m_lock, &t);
+	}
+	return check_value == 0;
 #else
-	::WaitForSingleObject(m_hEvent, INFINITE);
-	return true;
+	return ::WaitForSingleObject(m_hEvent, timeoutMs) == WAIT_OBJECT_0;
 #endif
 }
 

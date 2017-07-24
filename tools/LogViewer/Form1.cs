@@ -842,7 +842,7 @@ namespace LogViewer {
 				if (frame.Ip == record.Ip && frame.Pid == record.Pid && frame.Tid == record.Tid) {
 					if (frame.StartIndex <= index && index <= frame.EndIndex) {
                         var n = e.Item.SubItems.Count;
-                        if (index != frame.StartIndex || index != frame.EndIndex)
+                        if (index != frame.StartIndex && index != frame.EndIndex)
                             n--;
 						for (int i = 0; i < n; i++)
 							e.Item.SubItems[i].BackColor = frame.Color;
