@@ -28,6 +28,8 @@
             this.tsmiOpen = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmiReopen = new System.Windows.Forms.ToolStripMenuItem();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.groupBox5 = new System.Windows.Forms.GroupBox();
+            this.tbCallStack = new System.Windows.Forms.TextBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.lvInterrupts = new System.Windows.Forms.ListView();
             this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -69,15 +71,15 @@
             this.colTid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colEnterLeave = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colMethod = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.groupBox5 = new System.Windows.Forms.GroupBox();
-            this.tbCallStack = new System.Windows.Forms.TextBox();
+            this.btnMarksToClipBoard = new System.Windows.Forms.Button();
+            this.btnInterruptsToClipBoard = new System.Windows.Forms.Button();
             this.menuStrip1.SuspendLayout();
             this.panel1.SuspendLayout();
+            this.groupBox5.SuspendLayout();
             this.groupBox4.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox1.SuspendLayout();
-            this.groupBox5.SuspendLayout();
             this.SuspendLayout();
             // 
             // menuStrip1
@@ -126,8 +128,34 @@
             this.panel1.Size = new System.Drawing.Size(650, 857);
             this.panel1.TabIndex = 2;
             // 
+            // groupBox5
+            // 
+            this.groupBox5.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox5.Controls.Add(this.tbCallStack);
+            this.groupBox5.Location = new System.Drawing.Point(7, 632);
+            this.groupBox5.Name = "groupBox5";
+            this.groupBox5.Size = new System.Drawing.Size(640, 213);
+            this.groupBox5.TabIndex = 4;
+            this.groupBox5.TabStop = false;
+            this.groupBox5.Text = "コールスタック";
+            // 
+            // tbCallStack
+            // 
+            this.tbCallStack.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tbCallStack.HideSelection = false;
+            this.tbCallStack.Location = new System.Drawing.Point(3, 15);
+            this.tbCallStack.Multiline = true;
+            this.tbCallStack.Name = "tbCallStack";
+            this.tbCallStack.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.tbCallStack.Size = new System.Drawing.Size(634, 195);
+            this.tbCallStack.TabIndex = 0;
+            this.tbCallStack.WordWrap = false;
+            // 
             // groupBox4
             // 
+            this.groupBox4.Controls.Add(this.btnInterruptsToClipBoard);
             this.groupBox4.Controls.Add(this.lvInterrupts);
             this.groupBox4.Location = new System.Drawing.Point(7, 394);
             this.groupBox4.Name = "groupBox4";
@@ -149,9 +177,9 @@
             this.lvInterrupts.FullRowSelect = true;
             this.lvInterrupts.GridLines = true;
             this.lvInterrupts.HideSelection = false;
-            this.lvInterrupts.Location = new System.Drawing.Point(8, 18);
+            this.lvInterrupts.Location = new System.Drawing.Point(8, 47);
             this.lvInterrupts.Name = "lvInterrupts";
-            this.lvInterrupts.Size = new System.Drawing.Size(626, 208);
+            this.lvInterrupts.Size = new System.Drawing.Size(626, 179);
             this.lvInterrupts.TabIndex = 1;
             this.lvInterrupts.UseCompatibleStateImageBehavior = false;
             this.lvInterrupts.View = System.Windows.Forms.View.Details;
@@ -239,6 +267,7 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.btnMarksToClipBoard);
             this.groupBox2.Controls.Add(this.btnSelDel);
             this.groupBox2.Controls.Add(this.btnSelAdd);
             this.groupBox2.Controls.Add(this.lvSelRanges);
@@ -477,30 +506,25 @@
             this.colMethod.Text = "メソッド";
             this.colMethod.Width = 300;
             // 
-            // groupBox5
+            // btnMarksToClipBoard
             // 
-            this.groupBox5.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox5.Controls.Add(this.tbCallStack);
-            this.groupBox5.Location = new System.Drawing.Point(7, 632);
-            this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(640, 213);
-            this.groupBox5.TabIndex = 4;
-            this.groupBox5.TabStop = false;
-            this.groupBox5.Text = "コールスタック";
+            this.btnMarksToClipBoard.Location = new System.Drawing.Point(170, 18);
+            this.btnMarksToClipBoard.Name = "btnMarksToClipBoard";
+            this.btnMarksToClipBoard.Size = new System.Drawing.Size(104, 23);
+            this.btnMarksToClipBoard.TabIndex = 3;
+            this.btnMarksToClipBoard.Text = "クリップボードへ";
+            this.btnMarksToClipBoard.UseVisualStyleBackColor = true;
+            this.btnMarksToClipBoard.Click += new System.EventHandler(this.btnMarksToClipBoard_Click);
             // 
-            // tbCallStack
+            // btnInterruptsToClipBoard
             // 
-            this.tbCallStack.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tbCallStack.HideSelection = false;
-            this.tbCallStack.Location = new System.Drawing.Point(3, 15);
-            this.tbCallStack.Multiline = true;
-            this.tbCallStack.Name = "tbCallStack";
-            this.tbCallStack.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.tbCallStack.Size = new System.Drawing.Size(634, 195);
-            this.tbCallStack.TabIndex = 0;
-            this.tbCallStack.WordWrap = false;
+            this.btnInterruptsToClipBoard.Location = new System.Drawing.Point(8, 18);
+            this.btnInterruptsToClipBoard.Name = "btnInterruptsToClipBoard";
+            this.btnInterruptsToClipBoard.Size = new System.Drawing.Size(104, 23);
+            this.btnInterruptsToClipBoard.TabIndex = 4;
+            this.btnInterruptsToClipBoard.Text = "クリップボードへ";
+            this.btnInterruptsToClipBoard.UseVisualStyleBackColor = true;
+            this.btnInterruptsToClipBoard.Click += new System.EventHandler(this.btnInterruptsToClipBoard_Click);
             // 
             // Form1
             // 
@@ -516,13 +540,13 @@
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.panel1.ResumeLayout(false);
+            this.groupBox5.ResumeLayout(false);
+            this.groupBox5.PerformLayout();
             this.groupBox4.ResumeLayout(false);
             this.groupBox3.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
-            this.groupBox5.ResumeLayout(false);
-            this.groupBox5.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -578,6 +602,8 @@
 		private System.Windows.Forms.ColumnHeader columnHeader6;
         private System.Windows.Forms.GroupBox groupBox5;
         private System.Windows.Forms.TextBox tbCallStack;
+        private System.Windows.Forms.Button btnInterruptsToClipBoard;
+        private System.Windows.Forms.Button btnMarksToClipBoard;
 	}
 }
 

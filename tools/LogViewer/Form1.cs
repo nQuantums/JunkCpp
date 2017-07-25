@@ -698,6 +698,11 @@ namespace LogViewer {
             this.lvRecords.EnsureVisible(index);
         }
 
+        void Reopen()
+        {
+            SetRecords(Record.ReadFromCsv(_CsvFileName));
+        }
+
 		private void tsmiOpen_Click(object sender, EventArgs e) {
 			//OpenFileDialogクラスのインスタンスを作成
 			using (var ofd = new OpenFileDialog()) {
@@ -715,7 +720,7 @@ namespace LogViewer {
 		}
 
 		private void tsmiReopen_Click(object sender, EventArgs e) {
-			SetRecords(Record.ReadFromCsv(_CsvFileName));
+            Reopen();
 		}
 
 		private void btnSearch_Click(object sender, EventArgs e) {
@@ -815,6 +820,9 @@ namespace LogViewer {
                 else if (e.KeyCode == Keys.F4)
                 {
                     Search(false);
+                } if (e.KeyCode == Keys.F5)
+                {
+                    Reopen();
                 }
             }
         }
@@ -867,5 +875,54 @@ namespace LogViewer {
 			e.Item.SubItems.Add(record.Tid.ToString());
 			e.Item.SubItems.Add(new string('　', record.Depth) + record.FrameName);
 		}
+
+        private void btnMarksToClipBoard_Click(object sender, EventArgs e)
+        {
+            Clipboard.SetText(ListViewToString(this.lvSelRanges));
+        }
+
+        private void btnInterruptsToClipBoard_Click(object sender, EventArgs e)
+        {
+            Clipboard.SetText(ListViewToString(this.lvInterrupts));
+        }
+
+        static string ListViewToString(ListView lv)
+        {
+            var sb = new StringBuilder();
+
+            // ヘッダ作成
+            bool first = true;
+            foreach (ColumnHeader c in lv.Columns)
+            {
+                if(first)
+                    first = false;
+                else
+                    sb.Append("\t");
+                sb.Append(c.Text);
+            }
+            sb.AppendLine();
+
+            // データ部作成
+            var items = lv.Items;
+            for (int i = 0, n = items.Count; i < n; i++)
+            {
+                var lvi = items[i];
+                var sitems = lvi.SubItems;
+
+                first = true;
+                for (int j = 0, m = sitems.Count; j < m; j++)
+                {
+                    var si = sitems[j];
+                    if (first)
+                        first = false;
+                    else
+                        sb.Append("\t");
+                    sb.Append(si.Text);
+                }
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
+        }
 	}
 }
