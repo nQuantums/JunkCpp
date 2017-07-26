@@ -23,6 +23,19 @@ struct JUNKAPICLASS DateTimeValue {
 	uint16_t Minute; //!< 分、0～59
 	uint16_t Second; //!< 秒、0～59
 	uint16_t Milliseconds; //!< ミリ秒、0～999
+
+	DateTimeValue() {
+	}
+
+	DateTimeValue(uint16_t year, uint16_t month = 0, uint16_t day = 0, uint16_t hour = 0, uint16_t minute = 0, uint16_t second = 0, uint16_t msecond = 0) {
+		this->Year = year;
+		this->Month = month;
+		this->Day = day;
+		this->Hour = hour;
+		this->Minute = minute;
+		this->Second = second;
+		this->Milliseconds = msecond;
+	}
 };
 
 //! 日時
@@ -39,18 +52,27 @@ struct JUNKAPICLASS DateTime {
 		return dt;
 	}
 
+	//! ミリ秒単位のUNIX時間から DateTime を取得
+	static DateTime FromUnixTimeMs(uint64_t unixTimeMs) {
+		return DateTime((unixTimeMs * 10000ULL) + 11644473600000ULL * 10000ULL);
+	}
+
 	DateTime() {
 	}
 
-	DateTime(uint16_t year, uint16_t month = 0, uint16_t day = 0, uint16_t hour = 0, uint16_t minute = 0, uint16_t second = 0, uint16_t msecond = 0) {
+	DateTime(uint64_t tick) {
+		this->Tick = tick;
+	}
+
+	DateTime(const DateTimeValue& dtv) {
 		SYSTEMTIME st;
-		st.wYear = year;
-		st.wMonth = month;
-		st.wDay = day;
-		st.wHour = hour;
-		st.wMinute = minute;
-		st.wSecond = second;
-		st.wMilliseconds = msecond;
+		st.wYear = dtv.Year;
+		st.wMonth = dtv.Month;
+		st.wDay = dtv.Day;
+		st.wHour = dtv.Hour;
+		st.wMinute = dtv.Minute;
+		st.wSecond = dtv.Second;
+		st.wMilliseconds = dtv.Milliseconds;
 		::SystemTimeToFileTime(&st, (FILETIME*)&this->Tick);
 	}
 
@@ -70,6 +92,11 @@ struct JUNKAPICLASS DateTime {
 		dtv.Milliseconds = st.wMilliseconds;
 
 		return dtv;
+	}
+
+	//! ミリ秒単位でのUNIX時間を取得する
+	uint64_t UnixTimeMs() const {
+		return (this->Tick - 11644473600000ULL * 10000ULL) / 10000ULL;
 	}
 
 	bool operator==(const DateTime& dt) const {
