@@ -7,6 +7,9 @@ using System.IO;
 
 namespace LogViewer {
 	public struct Record {
+        public const int NoCached = int.MinValue;
+
+        public int Index;
 		public DateTime DateTime;
 		public string Ip;
 		public UInt32 Pid;
@@ -59,8 +62,8 @@ namespace LogViewer {
 		public static bool TryParse(string line, out Record record) {
 			record = new Record();
 			var result = new Record();
-            result.CachedPairIndex = -1;
-            result.CachedParentIndex = -1;
+            result.CachedPairIndex = NoCached;
+            result.CachedParentIndex = NoCached;
 
 			// 日時解析
 			int start = 0;
@@ -150,6 +153,7 @@ namespace LogViewer {
 			var records = new Record[lines.Count];
 			for (int i = 0; i < records.Length; i++) {
 				Record.TryParse(lines[i], out records[i]);
+                records[i].Index = i;
 			}
 			return records;
 		}
