@@ -1,10 +1,11 @@
 {
-	"files.associations": {
-		"system_error": "cpp",
-		"vector": "cpp",
-		"iostream": "cpp",
-		"iosfwd": "cpp",
-		"xtree": "cpp",
-		"fstream": "cpp"
-	}
+    "files.associations": {
+        "system_error": "cpp",
+        "vector": "cpp",
+        "iostream": "cpp",
+        "iosfwd": "cpp",
+        "xtree": "cpp",
+        "fstream": "cpp",
+        "iomanip": "cpp"
+    }
 }

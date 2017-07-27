@@ -26,6 +26,7 @@ public:
 		WriteLog,
 		Flush,
 		FileClose,
+		BinaryLog,
 	};
 
 	//! サーバーからの応答ID
@@ -47,7 +48,7 @@ public:
 			ResultEnum Result; //!< 応答コードID
 		};
 
-		_FINLINE intptr_t PacketSize() const {
+		_FINLINE size_t PacketSize() const {
 			return sizeof(this->Size) + this->Size;
 		}
 
@@ -57,7 +58,13 @@ public:
 			return pPkt;
 		}
 
-		static Pkt* Allocate(CommandEnum command, void* pData, size_t dataSize) {
+		static Pkt* Allocate(CommandEnum command, size_t dataSize) {
+			Pkt* pPkt = Allocate(sizeof(pPkt->Command) + dataSize);
+			pPkt->Command = command;
+			return pPkt;
+		}
+
+		static Pkt* Allocate(CommandEnum command, const void* pData, size_t dataSize) {
 			Pkt* pPkt = Allocate(sizeof(pPkt->Command) + dataSize);
 			pPkt->Command = command;
 			memcpy(&pPkt[1], pData, dataSize);
@@ -72,12 +79,33 @@ public:
 
 	//! ログ出力コマンドパケット
 	struct PktCommandLogWrite : public Pkt {
-		char Text[1]; //!< 文字列データ
+		uint32_t Pid; //!< プロセスID
+		uint32_t Tid; //!< スレッドID
+		char Text[1]; //!< UTF-8エンコードされた文字列データ
+
+		static PktCommandLogWrite* Allocate(uint32_t pid, uint32_t tid, const char* pszText, size_t size) {
+			PktCommandLogWrite* pPkt = (PktCommandLogWrite*)Pkt::Allocate(CommandEnum::WriteLog, sizeof(uint32_t) + sizeof(uint32_t) + size);
+			pPkt->Pid = pid;
+			pPkt->Tid = tid;
+			memcpy(pPkt->Text, pszText, size);
+			return pPkt;
+		}
+	};
+
+	//! バイナリ形式ログ出力設定コマンドパケット
+	struct PktCommandBinaryLog : public Pkt {
+		int32_t Binary; //!< 0以外ならバイナリ
+
+		static PktCommandBinaryLog* Allocate(bool binary) {
+			int32_t binaryValue = binary;
+			PktCommandBinaryLog* pPkt = (PktCommandBinaryLog*)Pkt::Allocate(CommandEnum::BinaryLog, &binaryValue, sizeof(binaryValue));
+			return pPkt;
+		}
 	};
 #pragma pack(pop)
 
 	//! CommandWriteLog 内から呼び出されるハンドラ
-	typedef void (*CommandWriteLogHandler)(SocketRef sock, PktCommandLogWrite* pCmd, const char* pszRemoteName, const char* pszLogText, size_t logTextLen);
+	typedef void (*CommandWriteLogHandler)(SocketRef sock, PktCommandLogWrite* pCmd, const char* pszRemoteName);
 
     static void Startup(); //!< ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドアンセーフ
     static void Cleanup(); //!< 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
@@ -87,6 +115,7 @@ public:
 	ibool Start(const wchar_t* pszLogFolder, int port); //!< 別スレッドでサーバー処理を開始する、スレッドアンセーフ
 	void Stop(); //!< サーバー処理スレッドを停止する、スレッドアンセーフ
 	void Write(const char* bytes, size_t size); //!< ログファイルへ書き込む
+	void CommandBinaryLog(SocketRef sock, PktCommandBinaryLog* pCmd); //!< バイナリ形式でログ出力するかどうか設定する
 	void CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& remoteName); //!< ログ出力コマンド処理
 	void CommandFlush(SocketRef sock, Pkt* pCmd); //!< フラッシュコマンド処理
 	void CommandFileClose(SocketRef sock, Pkt* pCmd); //!< 現在のログファイルを閉じる
@@ -129,6 +158,8 @@ private:
 	std::vector<Client*> m_Clients; //!< クライアント処理配列
 	CriticalSection m_ClientsCs; //!< m_Clients アクセス排他処理用
 
+	bool m_BinaryLog; //!< バイナリ形式でログを出力するかどうか
+
 	CommandWriteLogHandler m_CommandWriteLogHandler; //!< CommandWriteLog 内から呼び出されるハンドラ
 };
 
@@ -147,9 +178,10 @@ public:
 	static void Startup(Instance* pInstance); //!< 他DLLのインスタンスを指定して初期化する
     static void Cleanup(); //!< 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
 	static LogServer::Pkt* Command(LogServer::Pkt* pCmd); //!< サーバーへコマンドパケットを送り応答を取得する、スレッドセーフ
-    static void WriteLog(const wchar_t* pszText); //!< サーバーへログを送る、スレッドセーフ
-	static void Flush(); //!< サーバーへログをファイルへフラッシュ要求
-	static void FileClose(); //!< サーバーへ現在のログファイルを閉じる要求
+	static void BinaryLog(bool binary); //!< サーバーのログ出力形式をバイナリかどうか設定する、スレッドセーフ
+	static void WriteLog(const wchar_t* pszText); //!< サーバーへログを送る、スレッドセーフ
+	static void Flush(); //!< サーバーへログをファイルへフラッシュ要求、スレッドセーフ
+	static void FileClose(); //!< サーバーへ現在のログファイルを閉じる要求、スレッドセーフ
 	static intptr_t GetDepth(); //!< 現在のスレッドの呼び出し深度の取得
 	static intptr_t IncrementDepth(); //!< 現在のスレッドの呼び出し深度をインクリメント
 	static intptr_t DecrementDepth(); //!< 現在のスレッドの呼び出し深度をデクリメント

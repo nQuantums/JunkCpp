@@ -43,13 +43,34 @@ struct JUNKAPICLASS DateTime {
 #if defined _MSC_VER
 	uint64_t Tick; //!< 規定日時からの経過時間値
 
-	//! 現在日時の取得
+	//! ローカル時間での現在日時の取得
 	static DateTime Now() {
 		FILETIME ft;
 		DateTime dt;
 		::GetSystemTimeAsFileTime(&ft);
 		::FileTimeToLocalFileTime(&ft, (FILETIME*)&dt.Tick);
 		return dt;
+	}
+
+	//! UTC時間での現在日時の取得
+	static DateTime NowUtc() {
+		DateTime dt;
+		::GetSystemTimeAsFileTime((FILETIME*)&dt.Tick);
+		return dt;
+	}
+
+	//! UTC時間からローカル時間へ変換
+	static DateTime UtcToLocal(const DateTime& dtutc) {
+		DateTime dtlocal;
+		::FileTimeToLocalFileTime((FILETIME*)&dtutc.Tick, (FILETIME*)&dtlocal.Tick);
+		return dtlocal;
+	}
+
+	//! ローカル時間からUTC時間へ変換
+	static DateTime LocalToUtc(const DateTime& dtlocal) {
+		DateTime dtutc;
+		::LocalFileTimeToFileTime((FILETIME*)&dtlocal.Tick, (FILETIME*)&dtutc.Tick);
+		return dtlocal;
 	}
 
 	//! ミリ秒単位のUNIX時間から DateTime を取得

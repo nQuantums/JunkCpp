@@ -575,6 +575,15 @@ struct JUNKAPICLASS SocketRef {
 #endif
 	}
 
+	//! ブロッキングモードで Send() または SendTo() 呼び出し時に負数が返った場合にタイムアウトによりエラーとなったかどうか調べる
+	_FINLINE bool TimedOutSendError() {
+#ifdef __GNUC__
+		return errno == EAGAIN || errno == EWOULDBLOCK;
+#elif defined _MSC_VER
+		return ::WSAGetLastError() == WSAETIMEDOUT;
+#endif
+	}
+
 	//! ブロッキングモードで Recv() または RecvFrom() 呼び出し時に負数が返った場合にタイムアウトによりエラーとなったかどうか調べる
 	_FINLINE bool TimedOutRecvError() {
 #ifdef __GNUC__

@@ -9,12 +9,33 @@
 #include "../../src/Thread.h"
 #include "../../src/Error.h"
 #include "../../src/Directory.h"
+#include "../../src/DateTime.h"
+#include <time.h>
+#include <atltime.h>
 
 bool LogServerTest();
 bool LogClientTest();
 bool LogClientTestDll();
 
 int main(int argc, char *argv[]) {
+	//ATL::CTime ctime;
+	//ATL::CFileTime cftime;
+
+	for (;;) {
+		auto nowUtc = jk::DateTime::NowUtc();
+		auto now = jk::DateTime::Now();
+		//std::cout << (now.Tick - nowUtc.Tick) / 3600 << std::endl;
+		std::cout << nowUtc.UnixTimeMs() - _time64(NULL) * 1000 << std::endl;
+		//__time64_t t1 = _time64(NULL);
+		//tm lt;
+		////_localtime64_s(&lt, &t1);
+		//_gmtime64_s(&lt, &t1);
+		//__time64_t t2 = _mktime64(&lt);
+		//std::cout << t2 << " : " << jk::DateTime::Now().UnixTimeMs() / 1000 << std::endl;
+		//jk::Thread::Sleep(100);
+	}
+
+
 	if (argc < 2) {
 		std::cout << "loggerTest.exe <mode>" << std::endl;
 		std::cout << "<mode> : server / client" << std::endl;
@@ -36,14 +57,14 @@ int main(int argc, char *argv[]) {
 
 static std::string g_MethodToHandle = "\"+: Struct1::Func4(";
 
-void CommandWriteLogHandler(jk::SocketRef sock, jk::LogServer::PktCommandLogWrite* pCmd, const char* pszRemoteName, const char* pszLogText, size_t logTextLen) {
-	char* pszMethodPos = strchr(pCmd->Text, '"');
-	if (pszMethodPos == NULL)
-		return;
-	if (strncmp(pszMethodPos, g_MethodToHandle.c_str(), g_MethodToHandle.size()) != 0)
-		return;
+void CommandWriteLogHandler(jk::SocketRef sock, jk::LogServer::PktCommandLogWrite* pCmd, const char* pszRemoteName) {
+	//char* pszMethodPos = strchr(pCmd->Text, '"');
+	//if (pszMethodPos == NULL)
+	//	return;
+	//if (strncmp(pszMethodPos, g_MethodToHandle.c_str(), g_MethodToHandle.size()) != 0)
+	//	return;
 
-	std::cout << "Locking: " << pszLogText << std::endl;
+	//std::cout << "Locking: " << pszLogText << std::endl;
 	::Sleep(1000);
 }
 
