@@ -31,6 +31,7 @@
             this.groupBox5 = new System.Windows.Forms.GroupBox();
             this.tbCallStack = new System.Windows.Forms.TextBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
+            this.btnInterruptsToClipBoard = new System.Windows.Forms.Button();
             this.lvInterrupts = new System.Windows.Forms.ListView();
             this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -43,6 +44,7 @@
             this.btnJumpSource = new System.Windows.Forms.Button();
             this.btnJunpEnterLeave = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.btnMarksToClipBoard = new System.Windows.Forms.Button();
             this.btnSelDel = new System.Windows.Forms.Button();
             this.btnSelAdd = new System.Windows.Forms.Button();
             this.lvSelRanges = new System.Windows.Forms.ListView();
@@ -71,8 +73,8 @@
             this.colTid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colEnterLeave = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colMethod = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.btnMarksToClipBoard = new System.Windows.Forms.Button();
-            this.btnInterruptsToClipBoard = new System.Windows.Forms.Button();
+            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.menuStrip1.SuspendLayout();
             this.panel1.SuspendLayout();
             this.groupBox5.SuspendLayout();
@@ -164,12 +166,24 @@
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "割り込み一覧";
             // 
+            // btnInterruptsToClipBoard
+            // 
+            this.btnInterruptsToClipBoard.Location = new System.Drawing.Point(8, 18);
+            this.btnInterruptsToClipBoard.Name = "btnInterruptsToClipBoard";
+            this.btnInterruptsToClipBoard.Size = new System.Drawing.Size(104, 23);
+            this.btnInterruptsToClipBoard.TabIndex = 4;
+            this.btnInterruptsToClipBoard.Text = "クリップボードへ";
+            this.btnInterruptsToClipBoard.UseVisualStyleBackColor = true;
+            this.btnInterruptsToClipBoard.Click += new System.EventHandler(this.btnInterruptsToClipBoard_Click);
+            // 
             // lvInterrupts
             // 
             this.lvInterrupts.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.lvInterrupts.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader1,
+            this.columnHeader2,
             this.columnHeader3,
             this.columnHeader4,
             this.columnHeader5,
@@ -187,6 +201,7 @@
             // columnHeader3
             // 
             this.columnHeader3.Text = "IP";
+            this.columnHeader3.Width = 70;
             // 
             // columnHeader4
             // 
@@ -199,7 +214,7 @@
             // columnHeader6
             // 
             this.columnHeader6.Text = "メソッド";
-            this.columnHeader6.Width = 207;
+            this.columnHeader6.Width = 242;
             // 
             // groupBox3
             // 
@@ -277,6 +292,16 @@
             this.groupBox2.TabIndex = 1;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "選択範囲";
+            // 
+            // btnMarksToClipBoard
+            // 
+            this.btnMarksToClipBoard.Location = new System.Drawing.Point(170, 18);
+            this.btnMarksToClipBoard.Name = "btnMarksToClipBoard";
+            this.btnMarksToClipBoard.Size = new System.Drawing.Size(104, 23);
+            this.btnMarksToClipBoard.TabIndex = 3;
+            this.btnMarksToClipBoard.Text = "クリップボードへ";
+            this.btnMarksToClipBoard.UseVisualStyleBackColor = true;
+            this.btnMarksToClipBoard.Click += new System.EventHandler(this.btnMarksToClipBoard_Click);
             // 
             // btnSelDel
             // 
@@ -506,25 +531,14 @@
             this.colMethod.Text = "メソッド";
             this.colMethod.Width = 300;
             // 
-            // btnMarksToClipBoard
+            // columnHeader1
             // 
-            this.btnMarksToClipBoard.Location = new System.Drawing.Point(170, 18);
-            this.btnMarksToClipBoard.Name = "btnMarksToClipBoard";
-            this.btnMarksToClipBoard.Size = new System.Drawing.Size(104, 23);
-            this.btnMarksToClipBoard.TabIndex = 3;
-            this.btnMarksToClipBoard.Text = "クリップボードへ";
-            this.btnMarksToClipBoard.UseVisualStyleBackColor = true;
-            this.btnMarksToClipBoard.Click += new System.EventHandler(this.btnMarksToClipBoard_Click);
+            this.columnHeader1.Text = "Index";
             // 
-            // btnInterruptsToClipBoard
+            // columnHeader2
             // 
-            this.btnInterruptsToClipBoard.Location = new System.Drawing.Point(8, 18);
-            this.btnInterruptsToClipBoard.Name = "btnInterruptsToClipBoard";
-            this.btnInterruptsToClipBoard.Size = new System.Drawing.Size(104, 23);
-            this.btnInterruptsToClipBoard.TabIndex = 4;
-            this.btnInterruptsToClipBoard.Text = "クリップボードへ";
-            this.btnInterruptsToClipBoard.UseVisualStyleBackColor = true;
-            this.btnInterruptsToClipBoard.Click += new System.EventHandler(this.btnInterruptsToClipBoard_Click);
+            this.columnHeader2.Text = "日時";
+            this.columnHeader2.Width = 130;
             // 
             // Form1
             // 
@@ -604,6 +618,8 @@
         private System.Windows.Forms.TextBox tbCallStack;
         private System.Windows.Forms.Button btnInterruptsToClipBoard;
         private System.Windows.Forms.Button btnMarksToClipBoard;
+        private System.Windows.Forms.ColumnHeader columnHeader1;
+        private System.Windows.Forms.ColumnHeader columnHeader2;
 	}
 }
 
