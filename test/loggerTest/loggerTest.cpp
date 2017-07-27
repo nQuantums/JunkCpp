@@ -18,24 +18,6 @@ bool LogClientTest();
 bool LogClientTestDll();
 
 int main(int argc, char *argv[]) {
-	//ATL::CTime ctime;
-	//ATL::CFileTime cftime;
-
-	for (;;) {
-		auto nowUtc = jk::DateTime::NowUtc();
-		auto now = jk::DateTime::Now();
-		//std::cout << (now.Tick - nowUtc.Tick) / 3600 << std::endl;
-		std::cout << nowUtc.UnixTimeMs() - _time64(NULL) * 1000 << std::endl;
-		//__time64_t t1 = _time64(NULL);
-		//tm lt;
-		////_localtime64_s(&lt, &t1);
-		//_gmtime64_s(&lt, &t1);
-		//__time64_t t2 = _mktime64(&lt);
-		//std::cout << t2 << " : " << jk::DateTime::Now().UnixTimeMs() / 1000 << std::endl;
-		//jk::Thread::Sleep(100);
-	}
-
-
 	if (argc < 2) {
 		std::cout << "loggerTest.exe <mode>" << std::endl;
 		std::cout << "<mode> : server / client" << std::endl;
@@ -65,7 +47,7 @@ void CommandWriteLogHandler(jk::SocketRef sock, jk::LogServer::PktCommandLogWrit
 	//	return;
 
 	//std::cout << "Locking: " << pszLogText << std::endl;
-	::Sleep(1000);
+	//::Sleep(1000);
 }
 
 bool LogServerTest() {
@@ -155,6 +137,10 @@ bool LogClientTest() {
 			jk::GlobalSocketLogger::Flush();
 		} else if (line == "fclose") {
 			jk::GlobalSocketLogger::FileClose();
+		} else if (line == "binary") {
+			jk::GlobalSocketLogger::BinaryLog(true);
+		} else if (line == "text") {
+			jk::GlobalSocketLogger::BinaryLog(false);
 		}
 	}
 

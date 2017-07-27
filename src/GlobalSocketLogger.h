@@ -48,6 +48,7 @@ public:
 			ResultEnum Result; //!< 応答コードID
 		};
 
+		//! パケット全体のサイズ(bytes)
 		_FINLINE size_t PacketSize() const {
 			return sizeof(this->Size) + this->Size;
 		}
@@ -81,12 +82,19 @@ public:
 	struct PktCommandLogWrite : public Pkt {
 		uint32_t Pid; //!< プロセスID
 		uint32_t Tid; //!< スレッドID
+		uint32_t Depth; //! 呼び出し階層深度
 		char Text[1]; //!< UTF-8エンコードされた文字列データ
 
-		static PktCommandLogWrite* Allocate(uint32_t pid, uint32_t tid, const char* pszText, size_t size) {
-			PktCommandLogWrite* pPkt = (PktCommandLogWrite*)Pkt::Allocate(CommandEnum::WriteLog, sizeof(uint32_t) + sizeof(uint32_t) + size);
+		//! テキストサイズ(bytes)
+		_FINLINE size_t TextSize() const {
+			return this->Size - sizeof(this->Command) - sizeof(this->Pid) - sizeof(this->Tid) - sizeof(this->Depth);
+		}
+
+		static PktCommandLogWrite* Allocate(uint32_t pid, uint32_t tid, uint32_t depth, const char* pszText, size_t size) {
+			PktCommandLogWrite* pPkt = (PktCommandLogWrite*)Pkt::Allocate(CommandEnum::WriteLog, sizeof(uint32_t) * 3 + size);
 			pPkt->Pid = pid;
 			pPkt->Tid = tid;
+			pPkt->Depth = depth;
 			memcpy(pPkt->Text, pszText, size);
 			return pPkt;
 		}
@@ -116,7 +124,7 @@ public:
 	void Stop(); //!< サーバー処理スレッドを停止する、スレッドアンセーフ
 	void Write(const char* bytes, size_t size); //!< ログファイルへ書き込む
 	void CommandBinaryLog(SocketRef sock, PktCommandBinaryLog* pCmd); //!< バイナリ形式でログ出力するかどうか設定する
-	void CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& remoteName); //!< ログ出力コマンド処理
+	void CommandWriteLog(SocketRef sock, PktCommandLogWrite* pCmd, const std::string& remoteName); //!< ログ出力コマンド処理
 	void CommandFlush(SocketRef sock, Pkt* pCmd); //!< フラッシュコマンド処理
 	void CommandFileClose(SocketRef sock, Pkt* pCmd); //!< 現在のログファイルを閉じる
 
@@ -179,7 +187,7 @@ public:
     static void Cleanup(); //!< 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
 	static LogServer::Pkt* Command(LogServer::Pkt* pCmd); //!< サーバーへコマンドパケットを送り応答を取得する、スレッドセーフ
 	static void BinaryLog(bool binary); //!< サーバーのログ出力形式をバイナリかどうか設定する、スレッドセーフ
-	static void WriteLog(const wchar_t* pszText); //!< サーバーへログを送る、スレッドセーフ
+	static void WriteLog(uint32_t depth, const wchar_t* pszText); //!< サーバーへログを送る、スレッドセーフ
 	static void Flush(); //!< サーバーへログをファイルへフラッシュ要求、スレッドセーフ
 	static void FileClose(); //!< サーバーへ現在のログファイルを閉じる要求、スレッドセーフ
 	static intptr_t GetDepth(); //!< 現在のスレッドの呼び出し深度の取得

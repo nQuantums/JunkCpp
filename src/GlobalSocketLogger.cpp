@@ -202,18 +202,19 @@ void GlobalSocketLogger::BinaryLog(bool binary) {
 }
 
 //! サーバーへログを送る、スレッドセーフ
-void GlobalSocketLogger::WriteLog(const wchar_t* pszText) {
-	size_t textSize = ::wcslen(pszText) * sizeof(wchar_t);
-	if(textSize == 0)
+void GlobalSocketLogger::WriteLog(uint32_t depth, const wchar_t* pszText) {
+	size_t textLen = ::wcslen(pszText);
+	if(textLen == 0)
 		return;
 
 	std::string bytes;
-	g_Enc.GetBytes(pszText, textSize, bytes);
+	g_Enc.GetBytes(pszText, textLen, bytes);
 
 	std::auto_ptr<LogServer::PktCommandLogWrite> pCmd(
 		LogServer::PktCommandLogWrite::Allocate(
 			::GetCurrentProcessId(),
 			::GetCurrentThreadId(),
+			depth,
 			&bytes[0],
 			bytes.size()));
 	std::auto_ptr<LogServer::Pkt> pResult(Command(pCmd.get()));
@@ -370,8 +371,11 @@ void LogServer::Write(const char* bytes, size_t size) {
 			<< std::setw(2) << now.Hour
 			<< std::setw(2) << now.Minute
 			<< std::setw(2) << now.Second
-			<< std::setw(3) << now.Milliseconds
-			<< L".csv";
+			<< std::setw(3) << now.Milliseconds;
+		if (m_BinaryLog)
+			ss << L".binlog";
+		else
+			ss << L".csv";
 
 #if 1700 <= _MSC_VER
 		dir = std::move(FilePath::Combine(dir, ss.str().c_str()));
@@ -389,26 +393,53 @@ void LogServer::Write(const char* bytes, size_t size) {
 
 //! バイナリ形式でログ出力するかどうか設定する
 void LogServer::CommandBinaryLog(SocketRef sock, PktCommandBinaryLog* pCmd) {
-	m_BinaryLog = pCmd->Binary != 0;
+	// 必要に応じてファイル閉じる
+	{
+		CriticalSectionLock lock(&m_LogFileCs);
+		bool binary = pCmd->Binary != 0;
+		if (m_BinaryLog != binary)
+			m_LogFile.Close();
+		m_BinaryLog = binary;
+	}
+
+	// 応答を返す
+	Pkt result;
+	result.Size = sizeof(result.Result);
+	result.Result = ResultEnum::Ok;
+	sock.Send(&result, result.PacketSize());
 }
 
 //! ログ出力コマンド処理
-void LogServer::CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& remoteName) {
+void LogServer::CommandWriteLog(SocketRef sock, PktCommandLogWrite* pCmd, const std::string& remoteName) {
 	// ハンドラ呼び出し
 	CommandWriteLogHandler handler = m_CommandWriteLogHandler;
 	if (handler != NULL) {
 		handler(sock, (PktCommandLogWrite*)pCmd, remoteName.c_str());
 	}
 
+	// コマンド内テキスト部のサイズ
+	size_t textSize = pCmd->TextSize();
+
+	// テキスト／バイナリ形式判定
+	// ※ログ出力中に形式が切り替えられることは想定していない
 	if (m_BinaryLog) {
 		// バイナリ形式でログ出力
 		std::vector<uint8_t> buf;
-
 		uint64_t utc = DateTime::NowUtc().UnixTimeMs();
-		remoteName.size();
+		uint32_t remoteNameSize = (uint32_t)remoteName.size();
+		uint32_t writePacketSize = pCmd->Size - sizeof(pCmd->Command);
+		uint32_t logSize = sizeof(utc) + sizeof(remoteNameSize) + remoteName.size() + writePacketSize;
 
+		buf.reserve(sizeof(logSize) + logSize);
+		buf.insert(buf.end(), (uint8_t*)&logSize, (uint8_t*)&logSize + sizeof(logSize));
+		buf.insert(buf.end(), (uint8_t*)&utc, (uint8_t*)&utc + sizeof(utc));
+		buf.insert(buf.end(), (uint8_t*)&remoteNameSize, (uint8_t*)&remoteNameSize + sizeof(remoteNameSize));
+		if (remoteNameSize)
+			buf.insert(buf.end(), (uint8_t*)&remoteName[0], (uint8_t*)&remoteName[0] + remoteNameSize);
+		buf.insert(buf.end(), (uint8_t*)pCmd->Pid, (uint8_t*)pCmd->Pid + writePacketSize);
 
-		// TODO: now.Tick
+		// ファイルへ書き込み
+		Write((const char*)&buf[0], buf.size());
 	} else {
 		// テキスト形式でログ出力
 		std::stringstream ss;
@@ -425,11 +456,13 @@ void LogServer::CommandWriteLog(SocketRef sock, Pkt* pCmd, const std::string& re
 			<< std::setw(2) << now.Second << "."
 			<< std::setw(3) << now.Milliseconds;
 
-		// クライアントIPを登録
-		ss << ",Ip" << remoteName;
-
+		// クライアントアドレスを登録
+		ss << ",Ip" << remoteName << " Pid" << pCmd->Pid << " Tid" << pCmd->Tid;
+		// 呼び出し階層深度登録
+		ss << "," << pCmd->Depth;
 		// テキストを登録
-		ss << std::string(((PktCommandLogWrite*)pCmd)->Text, ((PktCommandLogWrite*)pCmd)->Text + (pCmd->Size - sizeof(pCmd->Command)));
+		ss << "," << std::string(pCmd->Text, pCmd->Text + textSize);
+		ss << "\n";
 
 		// ログテキストを取得
 #if 1700 <= _MSC_VER
@@ -590,8 +623,11 @@ void LogServer::Client::ThreadProc() {
 
 		// コマンド別処理
 		switch(pCmd->Command) {
+		case LogServer::CommandEnum::BinaryLog:
+			m_pOwner->CommandBinaryLog(sock, (LogServer::PktCommandBinaryLog*)pCmd);
+			break;
 		case LogServer::CommandEnum::WriteLog:
-			m_pOwner->CommandWriteLog(sock, pCmd, remoteName);
+			m_pOwner->CommandWriteLog(sock, (LogServer::PktCommandLogWrite*)pCmd, remoteName);
 			break;
 		case LogServer::CommandEnum::Flush:
 			m_pOwner->CommandFlush(sock, pCmd);
@@ -625,13 +661,11 @@ GlobalSocketLogger::Frame::Frame(const wchar_t* pszFrameName, const wchar_t* psz
 
 	std::wstringstream ss;
 
-	// 呼び出し深さ追加
-	ss << GetDepth() << JUNKLOG_DELIMITER;
 	// フレーム名と引数追加
-	ss << L"\"+: " << this->FrameName << L"(" << (pszArgs != NULL ? pszArgs : L"") << L")\"\n";
+	ss << L"\"+: " << this->FrameName << L"(" << (pszArgs != NULL ? pszArgs : L"") << L")\"";
 
 	// ログをサーバーへ送る
-	WriteLog(ss.str().c_str());
+	WriteLog(GetDepth(), ss.str().c_str());
 #else
 #error gcc version is not implemented.
 #endif
@@ -641,13 +675,11 @@ GlobalSocketLogger::Frame::~Frame() {
 #if defined _MSC_VER
 	std::wstringstream ss;
 
-	// 呼び出し深さ追加
-	ss << GetDepth() << JUNKLOG_DELIMITER;
 	// フレーム名と所要時間追加
-	ss << L"\"-: " << this->FrameName << JUNKLOG_DELIMITER << (Clock::SysNS() - this->EnterTime) / 1000000 << L"ms\"\n";
+	ss << L"\"-: " << this->FrameName << JUNKLOG_DELIMITER << (Clock::SysNS() - this->EnterTime) / 1000000 << L"ms\"";
 
 	// ログをサーバーへ送る
-	WriteLog(ss.str().c_str());
+	WriteLog(GetDepth(), ss.str().c_str());
 
 	DecrementDepth();
 #else
