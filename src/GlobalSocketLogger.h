@@ -20,7 +20,7 @@ public:
 #if (defined _MSC_VER) && (_MSC_VER <= 1500)
 	enum CommandEnum {
 #else
-	enum class CommandEnum : int32_t {
+	enum class CommandEnum : uint32_t {
 #endif
 		Unknown = 0,
 		WriteLog,
@@ -33,10 +33,20 @@ public:
 #if (defined _MSC_VER) && (_MSC_VER <= 1500)
 	enum ResultEnum {
 #else
-	enum class ResultEnum : int32_t {
+	enum class ResultEnum : uint32_t {
 #endif
 		Ok = 0,
 		Error,
+	};
+
+	//! ログの種類
+#if (defined _MSC_VER) && (_MSC_VER <= 1500)
+	enum LogTypeEnum {
+#else
+	enum class LogTypeEnum : uint8_t {
+#endif
+		Enter = 1,
+		Leave = 2,
 	};
 
 #pragma pack(push, 1)
@@ -44,8 +54,8 @@ public:
 	struct Pkt {
 		int32_t Size; // 以降に続くパケットバイト数
 		union {
-			CommandEnum Command; //!< コマンドID
-			ResultEnum Result; //!< 応答コードID
+			uint32_t Command; //!< コマンドID
+			uint32_t Result; //!< 応答コードID
 		};
 
 		//! パケット全体のサイズ(bytes)
@@ -61,13 +71,13 @@ public:
 
 		static Pkt* Allocate(CommandEnum command, size_t dataSize) {
 			Pkt* pPkt = Allocate(sizeof(pPkt->Command) + dataSize);
-			pPkt->Command = command;
+			pPkt->Command = (uint32_t)command;
 			return pPkt;
 		}
 
 		static Pkt* Allocate(CommandEnum command, const void* pData, size_t dataSize) {
 			Pkt* pPkt = Allocate(sizeof(pPkt->Command) + dataSize);
-			pPkt->Command = command;
+			pPkt->Command = (uint32_t)command;
 			memcpy(&pPkt[1], pData, dataSize);
 			return pPkt;
 		}
@@ -82,19 +92,21 @@ public:
 	struct PktCommandLogWrite : public Pkt {
 		uint32_t Pid; //!< プロセスID
 		uint32_t Tid; //!< スレッドID
-		uint32_t Depth; //! 呼び出し階層深度
+		uint32_t Depth; //!< 呼び出し階層深度
+		uint8_t LogType; //!< ログ種類
 		char Text[1]; //!< UTF-8エンコードされた文字列データ
 
 		//! テキストサイズ(bytes)
 		_FINLINE size_t TextSize() const {
-			return this->Size - sizeof(this->Command) - sizeof(this->Pid) - sizeof(this->Tid) - sizeof(this->Depth);
+			return this->Size - sizeof(this->Command) - sizeof(this->Pid) - sizeof(this->Tid) - sizeof(this->Depth) - sizeof(this->LogType);
 		}
 
-		static PktCommandLogWrite* Allocate(uint32_t pid, uint32_t tid, uint32_t depth, const char* pszText, size_t size) {
-			PktCommandLogWrite* pPkt = (PktCommandLogWrite*)Pkt::Allocate(CommandEnum::WriteLog, sizeof(uint32_t) * 3 + size);
+		static PktCommandLogWrite* Allocate(uint32_t pid, uint32_t tid, uint32_t depth, LogTypeEnum logType, const char* pszText, size_t size) {
+			PktCommandLogWrite* pPkt = (PktCommandLogWrite*)Pkt::Allocate(CommandEnum::WriteLog, sizeof(uint32_t) * 3 + sizeof(uint8_t) + size);
 			pPkt->Pid = pid;
 			pPkt->Tid = tid;
 			pPkt->Depth = depth;
+			pPkt->LogType = (uint8_t)logType;
 			memcpy(pPkt->Text, pszText, size);
 			return pPkt;
 		}
@@ -187,7 +199,7 @@ public:
     static void Cleanup(); //!< 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
 	static LogServer::Pkt* Command(LogServer::Pkt* pCmd); //!< サーバーへコマンドパケットを送り応答を取得する、スレッドセーフ
 	static void BinaryLog(bool binary); //!< サーバーのログ出力形式をバイナリかどうか設定する、スレッドセーフ
-	static void WriteLog(uint32_t depth, const wchar_t* pszText); //!< サーバーへログを送る、スレッドセーフ
+	static void WriteLog(uint32_t depth, LogServer::LogTypeEnum logType, const wchar_t* pszText); //!< サーバーへログを送る、スレッドセーフ
 	static void Flush(); //!< サーバーへログをファイルへフラッシュ要求、スレッドセーフ
 	static void FileClose(); //!< サーバーへ現在のログファイルを閉じる要求、スレッドセーフ
 	static intptr_t GetDepth(); //!< 現在のスレッドの呼び出し深度の取得
