@@ -36,7 +36,7 @@ namespace LogViewer
                         return (ApplicationData)serializer.ReadObject(fs);
                     }
                 }
-                catch (SerializationException se)
+                catch (SerializationException)
                 {
                     return new ApplicationData();
                 }

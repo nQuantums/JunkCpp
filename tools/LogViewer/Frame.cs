@@ -12,15 +12,19 @@ namespace LogViewer
     /// </summary>
     public struct Frame
     {
-        /// <summary>
-        /// レコード配列内での開始インデックス、見つからない場合は-1
-        /// </summary>
-        public int StartIndex;
+        public const int NullStartIndex = -1;
+        public const int NullEndIndex = int.MaxValue;
+        public static readonly Frame InvalidFrame = new Frame { StartRecordIndex = NullStartIndex, EndRecordIndex = NullEndIndex, Depth = -1 };
 
         /// <summary>
-        /// レコード配列内での終了インデックス、見つからない場合はint.MaxValue
+        /// レコード配列内での開始インデックス、見つからない場合は<see cref="NullStartIndex"/>
         /// </summary>
-        public int EndIndex;
+        public int StartRecordIndex;
+
+        /// <summary>
+        /// レコード配列内での終了インデックス、見つからない場合は<see cref="NullEndIndex"/>
+        /// </summary>
+        public int EndRecordIndex;
 
         public string Ip;
         public UInt32 Pid;
@@ -28,11 +32,19 @@ namespace LogViewer
         public int Depth;
         public Color Color;
 
+        public bool IsValid
+        {
+            get
+            {
+                return 1 <= this.Depth;
+            }
+        }
+
         public bool IsStartValid
         {
             get
             {
-                return this.StartIndex != -1;
+                return this.StartRecordIndex != NullStartIndex;
             }
         }
 
@@ -40,19 +52,7 @@ namespace LogViewer
         {
             get
             {
-                return this.EndIndex != int.MaxValue;
-            }
-        }
-
-        public int ValidIndex
-        {
-            get
-            {
-                if (this.StartIndex != -1)
-                    return this.StartIndex;
-                if (this.EndIndex != int.MaxValue)
-                    return this.EndIndex;
-                return -1;
+                return this.EndRecordIndex != NullEndIndex;
             }
         }
 
@@ -67,8 +67,8 @@ namespace LogViewer
 
         public override int GetHashCode()
         {
-            int hash = this.StartIndex.GetHashCode();
-            hash ^= this.EndIndex.GetHashCode();
+            int hash = this.StartRecordIndex.GetHashCode();
+            hash ^= this.EndRecordIndex.GetHashCode();
             if (this.Ip != null)
                 hash ^= this.Ip.GetHashCode();
             hash ^= this.Pid.GetHashCode();
@@ -79,9 +79,9 @@ namespace LogViewer
 
         public static bool operator ==(Frame a, Frame b)
         {
-            if (a.StartIndex != b.StartIndex)
+            if (a.StartRecordIndex != b.StartRecordIndex)
                 return false;
-            if (a.EndIndex != b.EndIndex)
+            if (a.EndRecordIndex != b.EndRecordIndex)
                 return false;
             if (a.Ip != b.Ip)
                 return false;
@@ -99,23 +99,32 @@ namespace LogViewer
             return !(a == b);
         }
 
+        public void AdjustRecordIndexBy(LogDocument document)
+        {
+            if (!document.IsValidIndex(this.StartRecordIndex))
+                this.StartRecordIndex = NullStartIndex;
+            if (!document.IsValidIndex(this.EndRecordIndex))
+                this.EndRecordIndex = NullEndIndex;
+        }
+
 
         /// <summary>
         /// 指定レコード配列内の指定インデックスのレコードに対応するフレームを検索する
         /// </summary>
-        /// <param name="records">全レコード配列</param>
+        /// <param name="document">検索対象ログドキュメント</param>
         /// <param name="index">検索対象レコードインデックス</param>
         /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
         /// <returns>フレーム</returns>
-        public static Frame Search(Record[] records, int index, CancelInfo cancelInfo)
+        public static Frame Search(LogDocument document, int index, CancelInfo cancelInfo)
         {
-            if (index < 0 || records.Length <= index)
-                return new Frame();
+            if (!document.IsValidIndex(index))
+                return InvalidFrame;
 
+            var records = document.Records;
             var curRecord = records[index];
             var frame = new Frame();
-            frame.StartIndex = index;
-            frame.EndIndex = index;
+            frame.StartRecordIndex = index;
+            frame.EndRecordIndex = index;
             frame.Ip = curRecord.Ip;
             frame.Pid = curRecord.Pid;
             frame.Tid = curRecord.Tid;
@@ -126,21 +135,24 @@ namespace LogViewer
             {
                 if (curRecord.Enter)
                 {
-                    frame.EndIndex = curRecord.CachedPairIndex;
+                    frame.EndRecordIndex = curRecord.CachedPairIndex;
                 }
                 else
                 {
-                    frame.StartIndex = curRecord.CachedPairIndex;
+                    frame.StartRecordIndex = curRecord.CachedPairIndex;
                 }
+                frame.AdjustRecordIndexBy(document);
                 return frame;
             }
 
             // 開始または終了レコードを探す
             if (curRecord.Enter)
             {
-                frame.EndIndex = int.MaxValue;
+                frame.EndRecordIndex = NullEndIndex;
 
-                for (int i = index + 1; i < records.Length; i++)
+                var start = index + 1;
+                var end = document.EndRecordIndex;
+                for (int i = start; i <= end; i++)
                 {
                     CancelInfo.Handle(cancelInfo);
 
@@ -155,19 +167,21 @@ namespace LogViewer
                         break;
                     if (r.Depth == frame.Depth && !r.Enter)
                     {
-                        frame.EndIndex = i;
+                        frame.EndRecordIndex = i;
                         break;
                     }
                 }
 
-                if (frame.EndIndex != int.MaxValue)
-                    records[index].CachedPairIndex = frame.EndIndex;
+                if (frame.EndRecordIndex != NullEndIndex)
+                    records[index].CachedPairIndex = frame.EndRecordIndex;
             }
             else
             {
-                frame.StartIndex = -1;
+                frame.StartRecordIndex = NullStartIndex;
 
-                for (int i = index - 1; i != -1; i--)
+                var start = index - 1;
+                var end = document.StartRecordIndex;
+                for (int i = start; end <= i; i--)
                 {
                     CancelInfo.Handle(cancelInfo);
 
@@ -182,41 +196,44 @@ namespace LogViewer
                         break;
                     if (r.Depth == frame.Depth && r.Enter)
                     {
-                        frame.StartIndex = i;
+                        frame.StartRecordIndex = i;
                         break;
                     }
                 }
 
-                if (frame.StartIndex != -1)
-                    records[index].CachedPairIndex = frame.StartIndex;
+                if (frame.StartRecordIndex != NullStartIndex)
+                    records[index].CachedPairIndex = frame.StartRecordIndex;
             }
 
             return frame;
         }
 
         /// <summary>
-        /// 指定フレームの呼び出し元レコードインデックスを検索する
+        /// 指定フレームの呼び出しフレームを検索する
         /// </summary>
-        /// <param name="records">全レコード配列</param>
+        /// <param name="document">検索対象ログドキュメント</param>
         /// <param name="frame">対象フレーム</param>
         /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
-        /// <returns>レコードインデックス、見つからないなら負数</returns>
-        public static int SearchParentIndex(Record[] records, Frame frame, CancelInfo cancelInfo)
+        /// <returns>フレーム</returns>
+        public static Frame SearchParentFrame(LogDocument document, Frame frame, CancelInfo cancelInfo)
         {
-            if (frame.Depth == 0)
-                return -1;
+            if (!frame.IsValid || !document.IsValidIndex(frame))
+                return InvalidFrame;
 
             // 親インデックスがキャッシュに記録されているならそっちを使用
             if (!frame.IsStartValid)
-                return -1;
-            var parentIndex = records[frame.StartIndex].CachedParentIndex;
+                return new Frame { StartRecordIndex = NullStartIndex, EndRecordIndex = NullEndIndex };
+            var records = document.Records;
+            var parentIndex = records[frame.StartRecordIndex].CachedParentIndex;
             if (parentIndex != Record.NoCached)
-                return parentIndex;
+                return Search(document, parentIndex, cancelInfo);
 
             // 呼び出し元なので深度をデクリメント
             frame.Depth--;
 
-            for (int i = frame.StartIndex - 1; i != -1; i--)
+            var start = frame.StartRecordIndex - 1;
+            var end = document.StartRecordIndex;
+            for (int i = start; end <= i; i--)
             {
                 CancelInfo.Handle(cancelInfo);
 
@@ -231,32 +248,35 @@ namespace LogViewer
                     break;
                 if (r.Depth == frame.Depth && r.Enter)
                 {
-                    records[frame.StartIndex].CachedParentIndex = i;
+                    records[frame.StartRecordIndex].CachedParentIndex = i;
                     if (frame.IsEndValid)
-                        records[frame.EndIndex].CachedParentIndex = i;
-                    return i;
+                        records[frame.EndRecordIndex].CachedParentIndex = i;
+                    return Search(document, i, cancelInfo);
                 }
             }
 
-            return -1;
+            return InvalidFrame;
         }
 
         /// <summary>
-        /// 指定フレームの最初の呼び出し先レコードインデックスを検索する
+        /// 指定フレームの最初の呼び出し先フレームを検索する
         /// </summary>
-        /// <param name="records">全レコード配列</param>
+        /// <param name="document">検索対象ログドキュメント</param>
         /// <param name="frame">対象フレーム</param>
         /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
-        /// <returns>レコードインデックス、見つからないなら負数</returns>
-        public static int SearchChildIndex(Record[] records, Frame frame, CancelInfo cancelInfo)
+        /// <returns>フレーム</returns>
+        public static Frame SearchChildFrame(LogDocument document, Frame frame, CancelInfo cancelInfo)
         {
-            if (frame.Depth == 0)
-                return -1;
+            if (!frame.IsValid || !document.IsValidIndex(frame))
+                return InvalidFrame;
 
             // 呼び出し先なので深度をインクリメント
             frame.Depth++;
 
-            for (int i = frame.StartIndex + 1; i < frame.EndIndex; i++)
+            var records = document.Records;
+            var start = frame.StartRecordIndex + 1;
+            var end = frame.EndRecordIndex - 1;
+            for (int i = start; i <= end; i++)
             {
                 CancelInfo.Handle(cancelInfo);
 
@@ -268,34 +288,33 @@ namespace LogViewer
                 if (r.Tid != frame.Tid)
                     continue;
                 if (r.Depth == frame.Depth && r.Enter)
-                    return i;
+                    return Search(document, i, cancelInfo);
             }
 
-            return -1;
+            return InvalidFrame;
         }
 
 
         /// <summary>
         /// 指定フレームの次の処理の開始レコードを検索する ※同スレッド内の次の処理に相当
         /// </summary>
-        /// <param name="records">全レコード配列</param>
+        /// <param name="document">検索対象ログドキュメント</param>
         /// <param name="frame">対象フレーム</param>
         /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
         /// <returns>レコードインデックス、見つからないなら負数</returns>
-        public static int SearchNextIndex(Record[] records, Frame frame, CancelInfo cancelInfo)
+        public static int SearchNextIndex(LogDocument document, Frame frame, CancelInfo cancelInfo)
         {
             if(!frame.IsEndValid)
                 return -1;
 
-            var parentIndex = SearchParentIndex(records, frame, cancelInfo);
-            if(parentIndex < 0)
-                return -1;
+            var parentFrame = SearchParentFrame(document, frame, cancelInfo);
+            parentFrame.AdjustRecordIndexBy(document);
 
-            var callerFrame = Search(records, parentIndex, cancelInfo);
-            var start = frame.EndIndex + 1;
-            var end = Math.Min(callerFrame.EndIndex, records.Length);
+            var records = document.Records;
+            var start = frame.EndRecordIndex + 1;
+            var end = Math.Min(parentFrame.EndRecordIndex - 1, document.EndRecordIndex);
 
-            for (int i = start; i < end; i++)
+            for (int i = start; i <= end; i++)
             {
                 CancelInfo.Handle(cancelInfo);
 
@@ -306,6 +325,8 @@ namespace LogViewer
                     continue;
                 if (r.Tid != frame.Tid)
                     continue;
+                if (r.Depth < frame.Depth)
+                    break;
                 if (r.Depth == frame.Depth && r.Enter)
                     return i;
             }
@@ -316,24 +337,23 @@ namespace LogViewer
         /// <summary>
         /// 指定フレームの前の処理の開始レコードを検索する ※同スレッド内の前の処理に相当
         /// </summary>
-        /// <param name="records">全レコード配列</param>
+        /// <param name="document">検索対象ログドキュメント</param>
         /// <param name="frame">対象フレーム</param>
         /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
         /// <returns>レコードインデックス、見つからないなら負数</returns>
-        public static int SearchPrevIndex(Record[] records, Frame frame, CancelInfo cancelInfo)
+        public static int SearchPrevIndex(LogDocument document, Frame frame, CancelInfo cancelInfo)
         {
             if (!frame.IsStartValid)
                 return -1;
 
-            var parentIndex = SearchParentIndex(records, frame, cancelInfo);
-            if (parentIndex < 0)
-                return -1;
+            var parentFrame = SearchParentFrame(document, frame, cancelInfo);
+            parentFrame.AdjustRecordIndexBy(document);
 
-            var callerFrame = Search(records, parentIndex, cancelInfo);
-            var start = callerFrame.StartIndex;
-            var end = frame.StartIndex;
+            var records = document.Records;
+            var start = frame.StartRecordIndex - 1;
+            var end = Math.Max(parentFrame.StartRecordIndex + 1, document.StartRecordIndex);
 
-            for (int i = frame.StartIndex - 1; callerFrame.StartIndex < i; i--)
+            for (int i = start; end <= i; i--)
             {
                 CancelInfo.Handle(cancelInfo);
 
@@ -344,6 +364,8 @@ namespace LogViewer
                     continue;
                 if (r.Tid != frame.Tid)
                     continue;
+                if (r.Depth < frame.Depth)
+                    break;
                 if (r.Depth == frame.Depth && r.Enter)
                     return i;
             }
@@ -354,27 +376,27 @@ namespace LogViewer
         /// <summary>
         /// 指定フレームのコールスタックテキストを作成する
         /// </summary>
-        /// <param name="records">全レコード配列</param>
+        /// <param name="document">検索対象ログドキュメント</param>
         /// <param name="frame">対象フレーム</param>
         /// <param name="cancelInfo">処理キャンセルを行えるようにするなら null 以外を指定する</param>
         /// <returns>コールスタックテキスト</returns>
-        public static string GetCallStackText(Record[] records, Frame frame, CancelInfo cancelInfo)
+        public static string GetCallStackText(LogDocument document, Frame frame, CancelInfo cancelInfo)
         {
+            if (!document.IsValidIndex(frame.StartRecordIndex))
+                return "";
+
+            var records = document.Records;
             var frameRecords = new List<Record>();
-            frameRecords.Add(records[frame.StartIndex]);
+            frameRecords.Add(records[frame.StartRecordIndex]);
 
             var f = frame;
             for (; ; )
             {
-                var index = SearchParentIndex(records, f, cancelInfo);
-                if (index < 0)
-                    break;
-
-                f = Search(records, index, cancelInfo);
+                f = SearchParentFrame(document, f, cancelInfo);
                 if (!f.IsStartValid)
                     break;
 
-                frameRecords.Add(records[f.StartIndex]);
+                frameRecords.Add(records[f.StartRecordIndex]);
             }
 
             var sb = new StringBuilder();

@@ -33,6 +33,8 @@
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.btnInterruptsToClipBoard = new System.Windows.Forms.Button();
             this.lvInterrupts = new System.Windows.Forms.ListView();
+            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -73,8 +75,7 @@
             this.colTid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colEnterLeave = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colMethod = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.現在のフレーム内のみ表示VToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.panel1.SuspendLayout();
             this.groupBox5.SuspendLayout();
@@ -87,7 +88,8 @@
             // menuStrip1
             // 
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.tsmiFile});
+            this.tsmiFile,
+            this.現在のフレーム内のみ表示VToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(1295, 24);
@@ -197,6 +199,15 @@
             this.lvInterrupts.TabIndex = 1;
             this.lvInterrupts.UseCompatibleStateImageBehavior = false;
             this.lvInterrupts.View = System.Windows.Forms.View.Details;
+            // 
+            // columnHeader1
+            // 
+            this.columnHeader1.Text = "Index";
+            // 
+            // columnHeader2
+            // 
+            this.columnHeader2.Text = "日時";
+            this.columnHeader2.Width = 130;
             // 
             // columnHeader3
             // 
@@ -531,14 +542,12 @@
             this.colMethod.Text = "メソッド";
             this.colMethod.Width = 300;
             // 
-            // columnHeader1
+            // 現在のフレーム内のみ表示VToolStripMenuItem
             // 
-            this.columnHeader1.Text = "Index";
-            // 
-            // columnHeader2
-            // 
-            this.columnHeader2.Text = "日時";
-            this.columnHeader2.Width = 130;
+            this.現在のフレーム内のみ表示VToolStripMenuItem.Name = "現在のフレーム内のみ表示VToolStripMenuItem";
+            this.現在のフレーム内のみ表示VToolStripMenuItem.Size = new System.Drawing.Size(159, 20);
+            this.現在のフレーム内のみ表示VToolStripMenuItem.Text = "現在のフレーム内のみ表示(&V)";
+            this.現在のフレーム内のみ表示VToolStripMenuItem.Click += new System.EventHandler(this.現在のフレーム内のみ表示VToolStripMenuItem_Click);
             // 
             // Form1
             // 
@@ -620,6 +629,7 @@
         private System.Windows.Forms.Button btnMarksToClipBoard;
         private System.Windows.Forms.ColumnHeader columnHeader1;
         private System.Windows.Forms.ColumnHeader columnHeader2;
+        private System.Windows.Forms.ToolStripMenuItem 現在のフレーム内のみ表示VToolStripMenuItem;
 	}
 }
 
