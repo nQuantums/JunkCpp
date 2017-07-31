@@ -11,6 +11,15 @@ using System.Reflection;
 
 namespace LogViewer {
 	public partial class Form1 : Form {
+        struct SearchArgs
+        {
+            public string Ip;
+            public UInt32 Pid;
+            public UInt32 Tid;
+            public string Method;
+        }
+
+
 		static Color[] ColorTable = new Color[] {
 			Color.FromArgb(127, 127, 255),
 			Color.FromArgb(127, 255, 127),
@@ -25,7 +34,8 @@ namespace LogViewer {
         string _BaseTitle;
 
         LogDocument _LogDocument;
-		Record[] _Interrupts = new Record[0];
+        List<int> _SameThreadRecordIndices = new List<int>();
+        List<int> _OtherThreadRecordIndices = new List<int>();
 		Frame _CurrentFrame;
 		List<Frame> _MarkedFrames = new List<Frame>();
 
@@ -63,7 +73,11 @@ namespace LogViewer {
                     UpdateRecordsListItem(start, end);
 
                 // 現在フレーム実行中に割り込まれた他スレッドの処理を表示
-				SetInterrupts(QueryInterrupts(_CurrentFrame).ToArray());
+                var sameThread = new List<int>();
+                var otherThread = new List<int>();
+                QueryFrameInternalRecordIndices(_CurrentFrame, sameThread, otherThread);
+                SetSameThreadRecordIndices(sameThread);
+                SetOtherThreadRecordIndices(otherThread);
                 // コールスタックを表示
                 this.tbCallStack.Text = Frame.GetCallStackText(_LogDocument, _CurrentFrame, null);
 			}
@@ -91,6 +105,8 @@ namespace LogViewer {
             this.tbMethod.AutoCompleteSource = AutoCompleteSource.CustomSource;
             this.tbMethod.AutoCompleteCustomSource = Program.SearchedMethods;
 
+            this.tbMethod.KeyDown += tbMethod_KeyDown;
+
 
             this.lvRecords.GetType().InvokeMember(
 			   "DoubleBuffered",
@@ -103,16 +119,25 @@ namespace LogViewer {
 			this.lvRecords.SelectedIndexChanged += LvRecords_SelectedIndexChanged;
             this.lvRecords.KeyDown += lvRecords_KeyDown;
 
-			this.lvInterrupts.GetType().InvokeMember(
+            this.lvSameThread.GetType().InvokeMember(
+               "DoubleBuffered",
+               BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
+               null,
+               this.lvSameThread,
+               new object[] { true });
+            this.lvSameThread.VirtualMode = true;
+            this.lvSameThread.RetrieveVirtualItem += lvSameThread_RetrieveVirtualItem;
+
+            this.tbMethod.KeyDown += tbMethod_KeyDown;
+
+			this.lvOtherThread.GetType().InvokeMember(
 			   "DoubleBuffered",
 			   BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
 			   null,
-			   this.lvInterrupts,
+			   this.lvOtherThread,
 			   new object[] { true });
-			this.lvInterrupts.VirtualMode = true;
-			this.lvInterrupts.RetrieveVirtualItem += LvInterrupts_RetrieveVirtualItem;
-
-            this.tbMethod.KeyDown += tbMethod_KeyDown;
+			this.lvOtherThread.VirtualMode = true;
+			this.lvOtherThread.RetrieveVirtualItem += LvOtherThread_RetrieveVirtualItem;
 		}
 
         public Form1(LogDocument document)
@@ -147,19 +172,23 @@ namespace LogViewer {
             if (!_LogDocument.IsValidIndex(frame))
                 return;
 
+            var records = _LogDocument.Records;
+
             frame.Color = ColorTable[ColorIndex++ % ColorTable.Length];
             _MarkedFrames.Add(frame);
             UpdateRecordsListItem(frame.StartRecordIndex, frame.EndRecordIndex);
 
             var lvi = new ListViewItem();
             lvi.UseItemStyleForSubItems = false;
-            lvi.Text = (frame.IsStartValid ? (frame.StartRecordIndex + 1).ToString() : "") + "～" + (frame.IsEndValid ? (frame.EndRecordIndex + 1).ToString() : "");
+            lvi.Text = records[frame.StartRecordIndex].DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff");
+            lvi.SubItems.Add((records[frame.EndRecordIndex].DateTime - records[frame.StartRecordIndex].DateTime).ToString(@"hh\:mm\:ss\.fff"));
+            lvi.SubItems.Add((frame.IsStartValid ? (frame.StartRecordIndex + 1).ToString() : "") + "～" + (frame.IsEndValid ? (frame.EndRecordIndex + 1).ToString() : ""));
             lvi.SubItems.Add("");
             lvi.SubItems.Add(frame.Ip);
             lvi.SubItems.Add(frame.Pid.ToString());
             lvi.SubItems.Add(frame.Tid.ToString());
             lvi.SubItems.Add(_LogDocument.Records[frame.StartRecordIndex].FrameName);
-            lvi.SubItems[1].BackColor = frame.Color;
+            lvi.SubItems[3].BackColor = frame.Color;
             this.lvSelRanges.Items.Add(lvi);
         }
 
@@ -179,36 +208,45 @@ namespace LogViewer {
             this.lvSelRanges.Items.RemoveAt(index);
         }
 
-		void SetInterrupts(Record[] records) {
-			this.lvInterrupts.BeginUpdate();
+        void SetSameThreadRecordIndices(List<int> indices)
+        {
+            this.lvSameThread.BeginUpdate();
+            try
+            {
+                _SameThreadRecordIndices = indices;
+                this.lvSameThread.VirtualListSize = 0;
+                this.lvSameThread.VirtualListSize = indices.Count;
+            }
+            finally
+            {
+                this.lvSameThread.EndUpdate();
+            }
+        }
+        
+        void SetOtherThreadRecordIndices(List<int> indices)
+        {
+			this.lvOtherThread.BeginUpdate();
 			try {
-				_Interrupts = records;
-				this.lvInterrupts.VirtualListSize = 0;
-				this.lvInterrupts.VirtualListSize = _Interrupts.Length;
+				_OtherThreadRecordIndices = indices;
+				this.lvOtherThread.VirtualListSize = 0;
+                this.lvOtherThread.VirtualListSize = indices.Count;
 			} finally {
-				this.lvInterrupts.EndUpdate();
+				this.lvOtherThread.EndUpdate();
 			}
 		}
 
-		public Record[] GetInterrupts() {
-			return _Interrupts;
-		}
-
-        public List<Record> QueryInterrupts(Frame frame) {
-			var result = new List<Record>();
+        public void QueryFrameInternalRecordIndices(Frame frame, List<int> sameThreadRecordIndicesRecords, List<int> otherThreadRecordIndicesRecords)
+        {
 			var records = _LogDocument.Records;
             var start = Math.Max(_LogDocument.StartRecordIndex, frame.StartRecordIndex + 1);
-            var end = Math.Min(_LogDocument.EndRecordIndex, frame.EndRecordIndex);
+            var end = Math.Min(_LogDocument.EndRecordIndex, frame.EndRecordIndex - 1);
 			for (int i = start; i < end; i++) {
 				var r = records[i];
-				// 本流の処理は無視
-				if (r.Ip == frame.Ip && r.Pid == frame.Pid && r.Tid == frame.Tid)
-					continue;
-
-				// 他スレッドの処理を解析
-				result.Add(r);
+                if (r.Ip == frame.Ip && r.Pid == frame.Pid && r.Tid == frame.Tid)
+                    sameThreadRecordIndicesRecords.Add(i);
+                else
+                    otherThreadRecordIndicesRecords.Add(i);
 			}
-			return result;
 		}
 
         public Frame SearchCurrentFrame()
@@ -247,37 +285,98 @@ namespace LogViewer {
         /// <summary>
         /// レコード検索
         /// </summary>
+        /// <param name="document">検索対象ログドキュメント</param>
         /// <param name="forward">進みながら検索するなら true</param>
-        /// <param name="ip">検索対象IP、 null が指定されたらIPで絞らない</param>
-        /// <param name="pid">検索対象プロセスID、0 が指定されたらIPで絞らない</param>
-        /// <param name="pid">検索対象スレッドID、0 が指定されたらIPで絞らない</param>
-        /// <param name="method">検索対象処理内容文字列、大小無視で部分一致で検索される、null が指定されたら絞らない</param>
-		void Search(bool forward, string ip, UInt32 pid, UInt32 tid, string method) {
-			var startIndex = GetSelectedRecordIndex();
-			var records = _LogDocument.Records;
+        /// <param name="startIndex">検索開始レコードインデックス、<see cref="int.MinValue"/>なら無指定とみなす</param>
+        /// <param name="args">検索設定</param>
+        /// <param name="countMax">検索最大レコード数</param>
+        /// <returns>該当するレコードインデックスの配列</returns>
+        List<int> SearchRecordIndices(LogDocument document, bool forward, int startIndex, SearchArgs args, int countMax)
+        {
+            var result = new List<int>();
+            var records = document.Records;
 
-			if (forward) {
-                var start = Math.Max(startIndex + 1, _LogDocument.StartRecordIndex);
-                var end = _LogDocument.EndRecordIndex;
-				for (int i = start; i <= end; i++) {
-					var r = records[i];
-					if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid) && (method == null || 0 <= r.FrameName.IndexOf(method, StringComparison.CurrentCultureIgnoreCase))) {
-                        MoveToRecord(i);
-						break;
-					}
-				}
-			} else {
-                var start = Math.Min(startIndex - 1, _LogDocument.StartRecordIndex);
-                var end = _LogDocument.StartRecordIndex;
+            if (forward)
+            {
+                var start = startIndex == int.MinValue ? document.StartRecordIndex : startIndex;
+                var end = document.EndRecordIndex;
+                for (int i = start; i <= end; i++)
+                {
+                    var r = records[i];
+                    if ((args.Ip == null || r.Ip == args.Ip) && (args.Pid == 0 || r.Pid == args.Pid) && (args.Tid == 0 || r.Tid == args.Tid) && (args.Method == null || 0 <= r.FrameName.IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase)))
+                    {
+                        result.Add(i);
+                        if (result.Count == countMax)
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                var start = startIndex == int.MinValue ? document.StartRecordIndex : startIndex;
+                var end = document.StartRecordIndex;
                 for (int i = start; end <= i; i--)
                 {
-					var r = records[i];
-                    if ((ip == null || r.Ip == ip) && (pid == 0 || r.Pid == pid) && (tid == 0 || r.Tid == tid) && (method == null || 0 <= r.FrameName.IndexOf(method, StringComparison.CurrentCultureIgnoreCase))) {
-                        MoveToRecord(i);
-                        break;
-					}
-				}
-			}
+                    var r = records[i];
+                    if ((args.Ip == null || r.Ip == args.Ip) && (args.Pid == 0 || r.Pid == args.Pid) && (args.Tid == 0 || r.Tid == args.Tid) && (args.Method == null || 0 <= r.FrameName.IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase)))
+                    {
+                        result.Add(i);
+                        if (result.Count == countMax)
+                            break;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 現在のコントロールに設定されている検索条件から検索用引数を取得する
+        /// </summary>
+        SearchArgs GetSearchArgs()
+        {
+            var args = new SearchArgs();
+
+            args.Ip = this.tbIp.Text;
+            if (string.IsNullOrEmpty(args.Ip))
+                args.Ip = null;
+            args.Method = this.tbMethod.Text;
+            if (string.IsNullOrEmpty(args.Method))
+                args.Method = null;
+            UInt32.TryParse(this.tbPid.Text, out args.Pid);
+            UInt32.TryParse(this.tbTid.Text, out args.Tid);
+
+            if (!string.IsNullOrEmpty(args.Ip) && !Program.SearchedIps.Contains(args.Ip))
+                Program.SearchedIps.Add(args.Ip);
+            if (args.Pid != 0 && !Program.SearchedPids.Contains(args.Pid.ToString()))
+                Program.SearchedPids.Add(args.Pid.ToString());
+            if (args.Tid != 0 && !Program.SearchedTids.Contains(args.Tid.ToString()))
+                Program.SearchedTids.Add(args.Tid.ToString());
+            if (!string.IsNullOrEmpty(args.Method) && !Program.SearchedMethods.Contains(args.Method))
+                Program.SearchedMethods.Add(args.Method);
+
+            return args;
+        }
+
+        /// <summary>
+        /// レコード検索
+        /// </summary>
+        /// <param name="forward">進みながら検索するなら true</param>
+        /// <param name="args">検索設定</param>
+        void Search(bool forward, SearchArgs args)
+        {
+			var startIndex = GetSelectedRecordIndex();
+
+            if (forward)
+                startIndex++;
+            else
+                startIndex--;
+
+            var result = SearchRecordIndices(_LogDocument, forward, startIndex, args, 1);
+            if (result.Count != 0)
+            {
+                MoveToRecord(result[0]);
+            }
 		}
 
         /// <summary>
@@ -286,30 +385,7 @@ namespace LogViewer {
         /// <param name="forward">進みながら検索するなら true</param>
         void Search(bool forward)
         {
-            string ip;
-            UInt32 pid;
-            UInt32 tid;
-            string method;
-
-            ip = this.tbIp.Text;
-            if (string.IsNullOrEmpty(ip))
-                ip = null;
-            method = this.tbMethod.Text;
-            if (string.IsNullOrEmpty(method))
-                method = null;
-            UInt32.TryParse(this.tbPid.Text, out pid);
-            UInt32.TryParse(this.tbTid.Text, out tid);
-
-            if (!string.IsNullOrEmpty(ip) && !Program.SearchedIps.Contains(ip))
-                Program.SearchedIps.Add(ip);
-            if (pid != 0 && !Program.SearchedPids.Contains(pid.ToString()))
-                Program.SearchedPids.Add(pid.ToString());
-            if (tid != 0 && !Program.SearchedTids.Contains(tid.ToString()))
-                Program.SearchedTids.Add(tid.ToString());
-            if (!string.IsNullOrEmpty(method) && !Program.SearchedMethods.Contains(method))
-                Program.SearchedMethods.Add(method);
-
-            Search(forward, ip, pid, tid, method);
+            Search(forward, GetSearchArgs());
         }
 
         int GetSelectedRecordIndex()
@@ -376,6 +452,15 @@ namespace LogViewer {
             MoveToRecord(SearchPrevIndex());
         }
 
+        void MoveToMarkedFrame(int index)
+        {
+            if (index < 0 || _MarkedFrames.Count <= index)
+                return;
+            var range = _MarkedFrames[index];
+            MoveToRecord(range.StartRecordIndex);
+            this.lvRecords.Focus();
+        }
+
         void Reopen()
         {
             SetDocument(new LogDocument(_LogDocument.FileName, Record.ReadFromCsv(_LogDocument.FileName)));
@@ -415,16 +500,18 @@ namespace LogViewer {
 			RemoveMarkedFrameAt(si[0]);
 		}
 
+
+        private void btnSelClear_Click(object sender, EventArgs e)
+        {
+            _MarkedFrames.Clear();
+            this.lvSelRanges.Items.Clear();
+        }
+
 		private void lvSelRanges_DoubleClick(object sender, EventArgs e) {
 			var si = this.lvSelRanges.SelectedIndices;
 			if (si.Count == 0)
 				return;
-			var index = si[0];
-			if (index < 0 || _MarkedFrames.Count <= index)
-				return;
-
-			var range = _MarkedFrames[index];
-            MoveToRecord(range.StartRecordIndex);
+            MoveToMarkedFrame(si[0]);
 		}
 
 		private void btnJunpEnterLeave_Click(object sender, EventArgs e) {
@@ -544,32 +631,58 @@ namespace LogViewer {
 			}
 		}
 
-		private void LvInterrupts_RetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e) {
-			var records = GetInterrupts();
-			var index = e.ItemIndex;
-			if (records.Length <= index)
-				return;
+        void lvSameThread_RetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)
+        {
+            var recordIndices = _SameThreadRecordIndices;
+            var index = e.ItemIndex;
+            if (recordIndices.Count <= index)
+                return;
 
-			var record = records[index];
+            var recordIndex = recordIndices[index];
+            var record = _LogDocument.Records[recordIndex];
 
-			e.Item = new ListViewItem();
-			e.Item.UseItemStyleForSubItems = false;
+            e.Item = new ListViewItem();
+            e.Item.UseItemStyleForSubItems = false;
             e.Item.Text = (record.Index + 1).ToString();
             e.Item.SubItems.Add(record.DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff"));
             e.Item.SubItems.Add(record.Ip);
-			e.Item.SubItems.Add(record.Pid.ToString());
-			e.Item.SubItems.Add(record.Tid.ToString());
-			e.Item.SubItems.Add(new string('　', record.Depth) + record.FrameName);
-		}
+            e.Item.SubItems.Add(record.Pid.ToString());
+            e.Item.SubItems.Add(record.Tid.ToString());
+            e.Item.SubItems.Add(new string('　', record.Depth) + record.FrameName);
+        }
+
+		private void LvOtherThread_RetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e) {
+            var recordIndices = _OtherThreadRecordIndices;
+            var index = e.ItemIndex;
+            if (recordIndices.Count <= index)
+                return;
+
+            var recordIndex = recordIndices[index];
+            var record = _LogDocument.Records[recordIndex];
+
+            e.Item = new ListViewItem();
+            e.Item.UseItemStyleForSubItems = false;
+            e.Item.Text = (record.Index + 1).ToString();
+            e.Item.SubItems.Add(record.DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff"));
+            e.Item.SubItems.Add(record.Ip);
+            e.Item.SubItems.Add(record.Pid.ToString());
+            e.Item.SubItems.Add(record.Tid.ToString());
+            e.Item.SubItems.Add(new string('　', record.Depth) + record.FrameName);
+        }
 
         private void btnMarksToClipBoard_Click(object sender, EventArgs e)
         {
             Clipboard.SetText(ListViewToString(this.lvSelRanges));
         }
 
-        private void btnInterruptsToClipBoard_Click(object sender, EventArgs e)
+        private void btnOtherThreadToClipBoard_Click(object sender, EventArgs e)
         {
-            Clipboard.SetText(ListViewToString(this.lvInterrupts));
+            Clipboard.SetText(ListViewToString(this.lvSameThread));
+        }
+
+        private void btnSameThreadToClipBoard_Click(object sender, EventArgs e)
+        {
+            Clipboard.SetText(ListViewToString(this.lvOtherThread));
         }
 
         void tbMethod_KeyDown(object sender, KeyEventArgs e)
@@ -638,6 +751,26 @@ namespace LogViewer {
                 form.Dispose();
             };
             form.Show();
+        }
+
+        private void btnSearchSelAdd_Click(object sender, EventArgs e)
+        {
+            var indices = SearchRecordIndices(_LogDocument, true, int.MinValue, GetSearchArgs(), int.MaxValue);
+            foreach (var index in indices)
+            {
+                AddMarkedFrame(Frame.Search(_LogDocument, index, null));
+            }
+        }
+
+        private void lvSelRanges_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                var si = this.lvSelRanges.SelectedIndices;
+                if (si.Count == 0)
+                    return;
+                MoveToMarkedFrame(si[0]);
+            }
         }
 	}
 }

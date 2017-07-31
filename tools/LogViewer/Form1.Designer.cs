@@ -27,18 +27,28 @@
             this.tsmiFile = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmiOpen = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmiReopen = new System.Windows.Forms.ToolStripMenuItem();
+            this.現在のフレーム内のみ表示VToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.groupBox5 = new System.Windows.Forms.GroupBox();
-            this.tbCallStack = new System.Windows.Forms.TextBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
-            this.btnInterruptsToClipBoard = new System.Windows.Forms.Button();
-            this.lvInterrupts = new System.Windows.Forms.ListView();
+            this.btnOtherThreadToClipBoard = new System.Windows.Forms.Button();
+            this.lvOtherThread = new System.Windows.Forms.ListView();
             this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.groupBox6 = new System.Windows.Forms.GroupBox();
+            this.btnSameThreadToClipBoard = new System.Windows.Forms.Button();
+            this.lvSameThread = new System.Windows.Forms.ListView();
+            this.columnHeader7 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader8 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader9 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader10 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader11 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader12 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.groupBox5 = new System.Windows.Forms.GroupBox();
+            this.tbCallStack = new System.Windows.Forms.TextBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.btnJumpPrev = new System.Windows.Forms.Button();
             this.btnJumpNext = new System.Windows.Forms.Button();
@@ -46,10 +56,13 @@
             this.btnJumpSource = new System.Windows.Forms.Button();
             this.btnJunpEnterLeave = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.btnSelClear = new System.Windows.Forms.Button();
             this.btnMarksToClipBoard = new System.Windows.Forms.Button();
             this.btnSelDel = new System.Windows.Forms.Button();
             this.btnSelAdd = new System.Windows.Forms.Button();
             this.lvSelRanges = new System.Windows.Forms.ListView();
+            this.colSelDateTime = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.colSelTimeSpan = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colSelRange = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colSelColor = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colSelIp = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -57,6 +70,7 @@
             this.colSelTid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colSelMethod = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.btnSearchSelAdd = new System.Windows.Forms.Button();
             this.tbMethod = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.tbTid = new System.Windows.Forms.TextBox();
@@ -67,6 +81,7 @@
             this.btnSearchForward = new System.Windows.Forms.Button();
             this.tbIp = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.splitter1 = new System.Windows.Forms.Splitter();
             this.lvRecords = new System.Windows.Forms.ListView();
             this.colIndex = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colDateTime = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -75,11 +90,11 @@
             this.colTid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colEnterLeave = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colMethod = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.現在のフレーム内のみ表示VToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.panel1.SuspendLayout();
-            this.groupBox5.SuspendLayout();
             this.groupBox4.SuspendLayout();
+            this.groupBox6.SuspendLayout();
+            this.groupBox5.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -119,86 +134,71 @@
             this.tsmiReopen.Text = "開き直す(&R)";
             this.tsmiReopen.Click += new System.EventHandler(this.tsmiReopen_Click);
             // 
+            // 現在のフレーム内のみ表示VToolStripMenuItem
+            // 
+            this.現在のフレーム内のみ表示VToolStripMenuItem.Name = "現在のフレーム内のみ表示VToolStripMenuItem";
+            this.現在のフレーム内のみ表示VToolStripMenuItem.Size = new System.Drawing.Size(159, 20);
+            this.現在のフレーム内のみ表示VToolStripMenuItem.Text = "現在のフレーム内のみ表示(&V)";
+            this.現在のフレーム内のみ表示VToolStripMenuItem.Click += new System.EventHandler(this.現在のフレーム内のみ表示VToolStripMenuItem_Click);
+            // 
             // panel1
             // 
-            this.panel1.Controls.Add(this.groupBox5);
             this.panel1.Controls.Add(this.groupBox4);
+            this.panel1.Controls.Add(this.groupBox6);
+            this.panel1.Controls.Add(this.groupBox5);
             this.panel1.Controls.Add(this.groupBox3);
             this.panel1.Controls.Add(this.groupBox2);
             this.panel1.Controls.Add(this.groupBox1);
             this.panel1.Dock = System.Windows.Forms.DockStyle.Right;
             this.panel1.Location = new System.Drawing.Point(645, 24);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(650, 857);
+            this.panel1.Size = new System.Drawing.Size(650, 1139);
             this.panel1.TabIndex = 2;
-            // 
-            // groupBox5
-            // 
-            this.groupBox5.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox5.Controls.Add(this.tbCallStack);
-            this.groupBox5.Location = new System.Drawing.Point(7, 632);
-            this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(640, 213);
-            this.groupBox5.TabIndex = 4;
-            this.groupBox5.TabStop = false;
-            this.groupBox5.Text = "コールスタック";
-            // 
-            // tbCallStack
-            // 
-            this.tbCallStack.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tbCallStack.HideSelection = false;
-            this.tbCallStack.Location = new System.Drawing.Point(3, 15);
-            this.tbCallStack.Multiline = true;
-            this.tbCallStack.Name = "tbCallStack";
-            this.tbCallStack.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.tbCallStack.Size = new System.Drawing.Size(634, 195);
-            this.tbCallStack.TabIndex = 0;
-            this.tbCallStack.WordWrap = false;
             // 
             // groupBox4
             // 
-            this.groupBox4.Controls.Add(this.btnInterruptsToClipBoard);
-            this.groupBox4.Controls.Add(this.lvInterrupts);
-            this.groupBox4.Location = new System.Drawing.Point(7, 394);
+            this.groupBox4.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox4.Controls.Add(this.btnOtherThreadToClipBoard);
+            this.groupBox4.Controls.Add(this.lvOtherThread);
+            this.groupBox4.Location = new System.Drawing.Point(7, 725);
             this.groupBox4.Name = "groupBox4";
             this.groupBox4.Size = new System.Drawing.Size(640, 232);
             this.groupBox4.TabIndex = 3;
             this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "割り込み一覧";
+            this.groupBox4.Text = "フレーム内別スレッド処理";
             // 
-            // btnInterruptsToClipBoard
+            // btnOtherThreadToClipBoard
             // 
-            this.btnInterruptsToClipBoard.Location = new System.Drawing.Point(8, 18);
-            this.btnInterruptsToClipBoard.Name = "btnInterruptsToClipBoard";
-            this.btnInterruptsToClipBoard.Size = new System.Drawing.Size(104, 23);
-            this.btnInterruptsToClipBoard.TabIndex = 4;
-            this.btnInterruptsToClipBoard.Text = "クリップボードへ";
-            this.btnInterruptsToClipBoard.UseVisualStyleBackColor = true;
-            this.btnInterruptsToClipBoard.Click += new System.EventHandler(this.btnInterruptsToClipBoard_Click);
+            this.btnOtherThreadToClipBoard.Location = new System.Drawing.Point(8, 18);
+            this.btnOtherThreadToClipBoard.Name = "btnOtherThreadToClipBoard";
+            this.btnOtherThreadToClipBoard.Size = new System.Drawing.Size(104, 23);
+            this.btnOtherThreadToClipBoard.TabIndex = 4;
+            this.btnOtherThreadToClipBoard.Text = "クリップボードへ";
+            this.btnOtherThreadToClipBoard.UseVisualStyleBackColor = true;
+            this.btnOtherThreadToClipBoard.Click += new System.EventHandler(this.btnSameThreadToClipBoard_Click);
             // 
-            // lvInterrupts
+            // lvOtherThread
             // 
-            this.lvInterrupts.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.lvOtherThread.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.lvInterrupts.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.lvOtherThread.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.columnHeader1,
             this.columnHeader2,
             this.columnHeader3,
             this.columnHeader4,
             this.columnHeader5,
             this.columnHeader6});
-            this.lvInterrupts.FullRowSelect = true;
-            this.lvInterrupts.GridLines = true;
-            this.lvInterrupts.HideSelection = false;
-            this.lvInterrupts.Location = new System.Drawing.Point(8, 47);
-            this.lvInterrupts.Name = "lvInterrupts";
-            this.lvInterrupts.Size = new System.Drawing.Size(626, 179);
-            this.lvInterrupts.TabIndex = 1;
-            this.lvInterrupts.UseCompatibleStateImageBehavior = false;
-            this.lvInterrupts.View = System.Windows.Forms.View.Details;
+            this.lvOtherThread.FullRowSelect = true;
+            this.lvOtherThread.GridLines = true;
+            this.lvOtherThread.HideSelection = false;
+            this.lvOtherThread.Location = new System.Drawing.Point(8, 47);
+            this.lvOtherThread.Name = "lvOtherThread";
+            this.lvOtherThread.Size = new System.Drawing.Size(626, 179);
+            this.lvOtherThread.TabIndex = 1;
+            this.lvOtherThread.UseCompatibleStateImageBehavior = false;
+            this.lvOtherThread.View = System.Windows.Forms.View.Details;
             // 
             // columnHeader1
             // 
@@ -226,6 +226,102 @@
             // 
             this.columnHeader6.Text = "メソッド";
             this.columnHeader6.Width = 242;
+            // 
+            // groupBox6
+            // 
+            this.groupBox6.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox6.Controls.Add(this.btnSameThreadToClipBoard);
+            this.groupBox6.Controls.Add(this.lvSameThread);
+            this.groupBox6.Location = new System.Drawing.Point(7, 487);
+            this.groupBox6.Name = "groupBox6";
+            this.groupBox6.Size = new System.Drawing.Size(640, 232);
+            this.groupBox6.TabIndex = 5;
+            this.groupBox6.TabStop = false;
+            this.groupBox6.Text = "フレーム内同一スレッド処理";
+            // 
+            // btnSameThreadToClipBoard
+            // 
+            this.btnSameThreadToClipBoard.Location = new System.Drawing.Point(8, 18);
+            this.btnSameThreadToClipBoard.Name = "btnSameThreadToClipBoard";
+            this.btnSameThreadToClipBoard.Size = new System.Drawing.Size(104, 23);
+            this.btnSameThreadToClipBoard.TabIndex = 4;
+            this.btnSameThreadToClipBoard.Text = "クリップボードへ";
+            this.btnSameThreadToClipBoard.UseVisualStyleBackColor = true;
+            this.btnSameThreadToClipBoard.Click += new System.EventHandler(this.btnOtherThreadToClipBoard_Click);
+            // 
+            // lvSameThread
+            // 
+            this.lvSameThread.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.lvSameThread.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader7,
+            this.columnHeader8,
+            this.columnHeader9,
+            this.columnHeader10,
+            this.columnHeader11,
+            this.columnHeader12});
+            this.lvSameThread.FullRowSelect = true;
+            this.lvSameThread.GridLines = true;
+            this.lvSameThread.HideSelection = false;
+            this.lvSameThread.Location = new System.Drawing.Point(8, 47);
+            this.lvSameThread.Name = "lvSameThread";
+            this.lvSameThread.Size = new System.Drawing.Size(626, 179);
+            this.lvSameThread.TabIndex = 1;
+            this.lvSameThread.UseCompatibleStateImageBehavior = false;
+            this.lvSameThread.View = System.Windows.Forms.View.Details;
+            // 
+            // columnHeader7
+            // 
+            this.columnHeader7.Text = "Index";
+            // 
+            // columnHeader8
+            // 
+            this.columnHeader8.Text = "日時";
+            this.columnHeader8.Width = 130;
+            // 
+            // columnHeader9
+            // 
+            this.columnHeader9.Text = "IP";
+            this.columnHeader9.Width = 70;
+            // 
+            // columnHeader10
+            // 
+            this.columnHeader10.Text = "プロセスID";
+            // 
+            // columnHeader11
+            // 
+            this.columnHeader11.Text = "スレッドID";
+            // 
+            // columnHeader12
+            // 
+            this.columnHeader12.Text = "メソッド";
+            this.columnHeader12.Width = 242;
+            // 
+            // groupBox5
+            // 
+            this.groupBox5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox5.Controls.Add(this.tbCallStack);
+            this.groupBox5.Location = new System.Drawing.Point(7, 963);
+            this.groupBox5.Name = "groupBox5";
+            this.groupBox5.Size = new System.Drawing.Size(640, 173);
+            this.groupBox5.TabIndex = 4;
+            this.groupBox5.TabStop = false;
+            this.groupBox5.Text = "コールスタック";
+            // 
+            // tbCallStack
+            // 
+            this.tbCallStack.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tbCallStack.HideSelection = false;
+            this.tbCallStack.Location = new System.Drawing.Point(3, 15);
+            this.tbCallStack.Multiline = true;
+            this.tbCallStack.Name = "tbCallStack";
+            this.tbCallStack.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.tbCallStack.Size = new System.Drawing.Size(634, 155);
+            this.tbCallStack.TabIndex = 0;
+            this.tbCallStack.WordWrap = false;
             // 
             // groupBox3
             // 
@@ -293,20 +389,34 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox2.Controls.Add(this.btnSelClear);
             this.groupBox2.Controls.Add(this.btnMarksToClipBoard);
             this.groupBox2.Controls.Add(this.btnSelDel);
             this.groupBox2.Controls.Add(this.btnSelAdd);
             this.groupBox2.Controls.Add(this.lvSelRanges);
             this.groupBox2.Location = new System.Drawing.Point(7, 184);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(640, 204);
+            this.groupBox2.Size = new System.Drawing.Size(640, 297);
             this.groupBox2.TabIndex = 1;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "選択範囲";
             // 
+            // btnSelClear
+            // 
+            this.btnSelClear.Location = new System.Drawing.Point(170, 18);
+            this.btnSelClear.Name = "btnSelClear";
+            this.btnSelClear.Size = new System.Drawing.Size(75, 23);
+            this.btnSelClear.TabIndex = 4;
+            this.btnSelClear.Text = "クリア";
+            this.btnSelClear.UseVisualStyleBackColor = true;
+            this.btnSelClear.Click += new System.EventHandler(this.btnSelClear_Click);
+            // 
             // btnMarksToClipBoard
             // 
-            this.btnMarksToClipBoard.Location = new System.Drawing.Point(170, 18);
+            this.btnMarksToClipBoard.Location = new System.Drawing.Point(251, 18);
             this.btnMarksToClipBoard.Name = "btnMarksToClipBoard";
             this.btnMarksToClipBoard.Size = new System.Drawing.Size(104, 23);
             this.btnMarksToClipBoard.TabIndex = 3;
@@ -340,6 +450,8 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.lvSelRanges.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.colSelDateTime,
+            this.colSelTimeSpan,
             this.colSelRange,
             this.colSelColor,
             this.colSelIp,
@@ -351,11 +463,20 @@
             this.lvSelRanges.HideSelection = false;
             this.lvSelRanges.Location = new System.Drawing.Point(8, 47);
             this.lvSelRanges.Name = "lvSelRanges";
-            this.lvSelRanges.Size = new System.Drawing.Size(626, 151);
+            this.lvSelRanges.Size = new System.Drawing.Size(626, 244);
             this.lvSelRanges.TabIndex = 0;
             this.lvSelRanges.UseCompatibleStateImageBehavior = false;
             this.lvSelRanges.View = System.Windows.Forms.View.Details;
             this.lvSelRanges.DoubleClick += new System.EventHandler(this.lvSelRanges_DoubleClick);
+            this.lvSelRanges.KeyDown += new System.Windows.Forms.KeyEventHandler(this.lvSelRanges_KeyDown);
+            // 
+            // colSelDateTime
+            // 
+            this.colSelDateTime.Text = "日時";
+            // 
+            // colSelTimeSpan
+            // 
+            this.colSelTimeSpan.Text = "所要時間";
             // 
             // colSelRange
             // 
@@ -386,6 +507,7 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.btnSearchSelAdd);
             this.groupBox1.Controls.Add(this.tbMethod);
             this.groupBox1.Controls.Add(this.label4);
             this.groupBox1.Controls.Add(this.tbTid);
@@ -402,6 +524,16 @@
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "検索";
+            // 
+            // btnSearchSelAdd
+            // 
+            this.btnSearchSelAdd.Location = new System.Drawing.Point(8, 134);
+            this.btnSearchSelAdd.Name = "btnSearchSelAdd";
+            this.btnSearchSelAdd.Size = new System.Drawing.Size(75, 23);
+            this.btnSearchSelAdd.TabIndex = 5;
+            this.btnSearchSelAdd.Text = "全て追加";
+            this.btnSearchSelAdd.UseVisualStyleBackColor = true;
+            this.btnSearchSelAdd.Click += new System.EventHandler(this.btnSearchSelAdd_Click);
             // 
             // tbMethod
             // 
@@ -487,6 +619,15 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "IP:";
             // 
+            // splitter1
+            // 
+            this.splitter1.Dock = System.Windows.Forms.DockStyle.Right;
+            this.splitter1.Location = new System.Drawing.Point(642, 24);
+            this.splitter1.Name = "splitter1";
+            this.splitter1.Size = new System.Drawing.Size(3, 1139);
+            this.splitter1.TabIndex = 3;
+            this.splitter1.TabStop = false;
+            // 
             // lvRecords
             // 
             this.lvRecords.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
@@ -503,8 +644,8 @@
             this.lvRecords.HideSelection = false;
             this.lvRecords.Location = new System.Drawing.Point(0, 24);
             this.lvRecords.Name = "lvRecords";
-            this.lvRecords.Size = new System.Drawing.Size(645, 857);
-            this.lvRecords.TabIndex = 3;
+            this.lvRecords.Size = new System.Drawing.Size(642, 1139);
+            this.lvRecords.TabIndex = 4;
             this.lvRecords.UseCompatibleStateImageBehavior = false;
             this.lvRecords.View = System.Windows.Forms.View.Details;
             // 
@@ -540,21 +681,15 @@
             // colMethod
             // 
             this.colMethod.Text = "メソッド";
-            this.colMethod.Width = 300;
-            // 
-            // 現在のフレーム内のみ表示VToolStripMenuItem
-            // 
-            this.現在のフレーム内のみ表示VToolStripMenuItem.Name = "現在のフレーム内のみ表示VToolStripMenuItem";
-            this.現在のフレーム内のみ表示VToolStripMenuItem.Size = new System.Drawing.Size(159, 20);
-            this.現在のフレーム内のみ表示VToolStripMenuItem.Text = "現在のフレーム内のみ表示(&V)";
-            this.現在のフレーム内のみ表示VToolStripMenuItem.Click += new System.EventHandler(this.現在のフレーム内のみ表示VToolStripMenuItem_Click);
+            this.colMethod.Width = 1000;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1295, 881);
+            this.ClientSize = new System.Drawing.Size(1295, 1163);
             this.Controls.Add(this.lvRecords);
+            this.Controls.Add(this.splitter1);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.menuStrip1);
             this.MainMenuStrip = this.menuStrip1;
@@ -563,9 +698,10 @@
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.panel1.ResumeLayout(false);
+            this.groupBox4.ResumeLayout(false);
+            this.groupBox6.ResumeLayout(false);
             this.groupBox5.ResumeLayout(false);
             this.groupBox5.PerformLayout();
-            this.groupBox4.ResumeLayout(false);
             this.groupBox3.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);
             this.groupBox1.ResumeLayout(false);
@@ -581,15 +717,7 @@
 		private System.Windows.Forms.ToolStripMenuItem tsmiFile;
 		private System.Windows.Forms.ToolStripMenuItem tsmiOpen;
 		private System.Windows.Forms.ToolStripMenuItem tsmiReopen;
-		private System.Windows.Forms.Panel panel1;
-		private System.Windows.Forms.ListView lvRecords;
-		private System.Windows.Forms.ColumnHeader colIndex;
-		private System.Windows.Forms.ColumnHeader colDateTime;
-		private System.Windows.Forms.ColumnHeader colIp;
-		private System.Windows.Forms.ColumnHeader colPid;
-		private System.Windows.Forms.ColumnHeader colTid;
-		private System.Windows.Forms.ColumnHeader colEnterLeave;
-		private System.Windows.Forms.ColumnHeader colMethod;
+        private System.Windows.Forms.Panel panel1;
 		private System.Windows.Forms.GroupBox groupBox1;
 		private System.Windows.Forms.TextBox tbTid;
 		private System.Windows.Forms.Label label3;
@@ -618,18 +746,40 @@
         private System.Windows.Forms.Button btnJumpDest;
         private System.Windows.Forms.Button btnJumpSource;
 		private System.Windows.Forms.GroupBox groupBox4;
-		private System.Windows.Forms.ListView lvInterrupts;
+		private System.Windows.Forms.ListView lvOtherThread;
 		private System.Windows.Forms.ColumnHeader columnHeader3;
 		private System.Windows.Forms.ColumnHeader columnHeader4;
 		private System.Windows.Forms.ColumnHeader columnHeader5;
 		private System.Windows.Forms.ColumnHeader columnHeader6;
         private System.Windows.Forms.GroupBox groupBox5;
         private System.Windows.Forms.TextBox tbCallStack;
-        private System.Windows.Forms.Button btnInterruptsToClipBoard;
+        private System.Windows.Forms.Button btnOtherThreadToClipBoard;
         private System.Windows.Forms.Button btnMarksToClipBoard;
         private System.Windows.Forms.ColumnHeader columnHeader1;
         private System.Windows.Forms.ColumnHeader columnHeader2;
         private System.Windows.Forms.ToolStripMenuItem 現在のフレーム内のみ表示VToolStripMenuItem;
+        private System.Windows.Forms.Button btnSelClear;
+        private System.Windows.Forms.Button btnSearchSelAdd;
+        private System.Windows.Forms.ColumnHeader colSelDateTime;
+        private System.Windows.Forms.ColumnHeader colSelTimeSpan;
+        private System.Windows.Forms.Splitter splitter1;
+        private System.Windows.Forms.ListView lvRecords;
+        private System.Windows.Forms.ColumnHeader colIndex;
+        private System.Windows.Forms.ColumnHeader colDateTime;
+        private System.Windows.Forms.ColumnHeader colIp;
+        private System.Windows.Forms.ColumnHeader colPid;
+        private System.Windows.Forms.ColumnHeader colTid;
+        private System.Windows.Forms.ColumnHeader colEnterLeave;
+        private System.Windows.Forms.ColumnHeader colMethod;
+        private System.Windows.Forms.GroupBox groupBox6;
+        private System.Windows.Forms.Button btnSameThreadToClipBoard;
+        private System.Windows.Forms.ListView lvSameThread;
+        private System.Windows.Forms.ColumnHeader columnHeader7;
+        private System.Windows.Forms.ColumnHeader columnHeader8;
+        private System.Windows.Forms.ColumnHeader columnHeader9;
+        private System.Windows.Forms.ColumnHeader columnHeader10;
+        private System.Windows.Forms.ColumnHeader columnHeader11;
+        private System.Windows.Forms.ColumnHeader columnHeader12;
 	}
 }
 
