@@ -426,7 +426,7 @@ void LogServer::CommandWriteLog(SocketRef sock, PktCommandLogWrite* pCmd, const 
 		uint64_t utc = DateTime::NowUtc().UnixTimeMs();
 		uint32_t remoteNameSize = (uint32_t)remoteName.size();
 		uint32_t writePacketSize = pCmd->Size - sizeof(pCmd->Command);
-		uint32_t logSize = sizeof(utc) + sizeof(remoteNameSize) + remoteName.size() + writePacketSize;
+		uint32_t logSize = (uint32_t)(sizeof(utc) + sizeof(remoteNameSize) + remoteName.size() + writePacketSize);
 
 		buf.reserve(sizeof(logSize) + logSize);
 		buf.insert(buf.end(), (uint8_t*)&logSize, (uint8_t*)&logSize + sizeof(logSize));
@@ -646,43 +646,50 @@ void LogServer::Client::ThreadProc() {
 	delete this;
 }
 
+_JUNK_END
+
 
 //==============================================================================
-//		GlobalSocketLogger::Frame クラス
+//		エクスポート関数
 
-GlobalSocketLogger::Frame::Frame(const wchar_t* pszFrameName, const wchar_t* pszArgs) {
+JUNKAPI void JUNKCALL jk_GlobalSocketLogger_Startup(const wchar_t* pszHost, int port) {
+	jk::GlobalSocketLogger::Startup(pszHost, port);
+}
+
+JUNKAPI void JUNKCALL jk_GlobalSocketLogger_FrameStart(jk::GlobalSocketLogger::Frame* pFrame, const wchar_t* pszFrameName, const wchar_t* pszArgs) {
 #if defined _MSC_VER
-	this->EnterTime = Clock::SysNS();
-	this->FrameName = pszFrameName;
+	pFrame->EnterTime = jk::Clock::SysNS();
+	size_t len = wcslen(pszFrameName);
+	pFrame->pFrameName = new wchar_t[len + 1];
+	memcpy(pFrame->pFrameName, pszFrameName, (len + 1) * sizeof(wchar_t));
 
-	IncrementDepth();
+	jk::GlobalSocketLogger::IncrementDepth();
 
 	std::wstringstream ss;
 
 	// フレーム名と引数追加
-	ss << this->FrameName << L"(" << (pszArgs != NULL ? pszArgs : L"") << L")";
+	ss << pFrame->pFrameName << L"(" << (pszArgs != NULL ? pszArgs : L"") << L")";
 
 	// ログをサーバーへ送る
-	WriteLog(GetDepth(), LogServer::LogTypeEnum::Enter, ss.str().c_str());
+	jk::GlobalSocketLogger::WriteLog((uint32_t)jk::GlobalSocketLogger::GetDepth(), jk::LogServer::LogTypeEnum::Enter, ss.str().c_str());
 #else
 #error gcc version is not implemented.
 #endif
 }
 
-GlobalSocketLogger::Frame::~Frame() {
+JUNKAPI void JUNKCALL jk_GlobalSocketLogger_FrameEnd(jk::GlobalSocketLogger::Frame* pFrame) {
 #if defined _MSC_VER
 	std::wstringstream ss;
 
 	// フレーム名と所要時間追加
-	ss << this->FrameName << JUNKLOG_DELIMITER << (Clock::SysNS() - this->EnterTime) / 1000000 << L"ms";
+	ss << pFrame->pFrameName << JUNKLOG_DELIMITER << (jk::Clock::SysNS() - pFrame->EnterTime) / 1000000 << L"ms";
 
 	// ログをサーバーへ送る
-	WriteLog(GetDepth(), LogServer::LogTypeEnum::Leave, ss.str().c_str());
+	jk::GlobalSocketLogger::WriteLog((uint32_t)jk::GlobalSocketLogger::GetDepth(), jk::LogServer::LogTypeEnum::Leave, ss.str().c_str());
 
-	DecrementDepth();
+	jk::GlobalSocketLogger::DecrementDepth();
 #else
 #error gcc version is not implemented.
 #endif
 }
 
-_JUNK_END

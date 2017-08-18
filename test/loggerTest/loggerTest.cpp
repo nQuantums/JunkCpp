@@ -121,7 +121,7 @@ struct Struct1 {
 };
 
 bool LogClientTest() {
-	jk::GlobalSocketLogger::Startup("127.0.0.1", 33777);
+	jk::GlobalSocketLogger::Startup("192.168.56.1", 33777);
 
 	for (;;) {
 		std::string line;

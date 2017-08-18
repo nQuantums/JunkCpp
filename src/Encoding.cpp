@@ -3,29 +3,29 @@
 _JUNK_BEGIN
 
 
-//! ƒoƒCƒg”z—ñ‚©‚ç•¶š—ñ‚Ìæ“¾
+//! ãƒã‚¤ãƒˆé…åˆ—ã‹ã‚‰æ–‡å­—åˆ—ã®å–å¾—
 void Encoding::GetString(const char* bytes, size_t size, std::wstring& str) const {
-	size_t len = ::MultiByteToWideChar((UINT)this->CodePage, (DWORD)this->Flags, bytes, size, NULL, 0);
+	size_t len = ::MultiByteToWideChar((UINT)this->CodePage, (DWORD)this->Flags, bytes, (int)size, NULL, 0);
 	str.resize(len);
 	if(len == 0)
 		return;
-	len = (size_t)::MultiByteToWideChar((UINT)this->CodePage, (DWORD)this->Flags, bytes, size, &str[0], (int)len);
+	len = (size_t)::MultiByteToWideChar((UINT)this->CodePage, (DWORD)this->Flags, bytes, (int)size, &str[0], (int)len);
 	str.resize(len);
 }
 
-//! ƒoƒCƒg”z—ñ‚©‚ç•¶š—ñ‚Ìæ“¾
+//! ãƒã‚¤ãƒˆé…åˆ—ã‹ã‚‰æ–‡å­—åˆ—ã®å–å¾—
 void Encoding::GetString(const char* bytes, std::wstring& str) const {
 	GetString(bytes, strlen(bytes), str);
 }
 
-//! ƒoƒCƒg”z—ñ‚©‚ç•¶š—ñ‚Ìæ“¾
+//! ãƒã‚¤ãƒˆé…åˆ—ã‹ã‚‰æ–‡å­—åˆ—ã®å–å¾—
 void Encoding::GetString(const std::string& bytes, std::wstring& str) const {
 	if(bytes.empty())
 		return;
 	GetString(&bytes[0], bytes.size(), str);
 }
 
-//! ƒoƒCƒg”z—ñ‚©‚ç•¶š—ñ‚Ìæ“¾
+//! ãƒã‚¤ãƒˆé…åˆ—ã‹ã‚‰æ–‡å­—åˆ—ã®å–å¾—
 std::wstring Encoding::GetString(const char* bytes, size_t size) const {
 	std::wstring str;
 	GetString(bytes, size, str);
@@ -36,7 +36,7 @@ std::wstring Encoding::GetString(const char* bytes, size_t size) const {
 #endif
 }
 
-//! ƒoƒCƒg”z—ñ‚©‚ç•¶š—ñ‚Ìæ“¾
+//! ãƒã‚¤ãƒˆé…åˆ—ã‹ã‚‰æ–‡å­—åˆ—ã®å–å¾—
 std::wstring Encoding::GetString(const char* bytes) const {
 	std::wstring str;
 	GetString(bytes, strlen(bytes), str);
@@ -47,7 +47,7 @@ std::wstring Encoding::GetString(const char* bytes) const {
 #endif
 }
 
-//! ƒoƒCƒg”z—ñ‚©‚ç•¶š—ñ‚Ìæ“¾
+//! ãƒã‚¤ãƒˆé…åˆ—ã‹ã‚‰æ–‡å­—åˆ—ã®å–å¾—
 std::wstring Encoding::GetString(const std::string& bytes) const {
 	std::wstring str;
 	GetString(&bytes[0], bytes.size(), str);
@@ -58,29 +58,29 @@ std::wstring Encoding::GetString(const std::string& bytes) const {
 #endif
 }
 
-//! •¶š—ñ‚©‚çƒoƒCƒg”z—ñ‚Ìæ“¾
+//! æ–‡å­—åˆ—ã‹ã‚‰ãƒã‚¤ãƒˆé…åˆ—ã®å–å¾—
 void Encoding::GetBytes(const wchar_t* str, size_t strLen, std::string& bytes) const {
-	size_t len = ::WideCharToMultiByte((UINT)this->CodePage, (DWORD)this->Flags, str, strLen, NULL, 0, NULL, NULL);
+	size_t len = ::WideCharToMultiByte((UINT)this->CodePage, (DWORD)this->Flags, str, (int)strLen, NULL, 0, NULL, NULL);
 	bytes.resize(len);
 	if(len == 0)
 		return;
-	len = (size_t)::WideCharToMultiByte((UINT)this->CodePage, (DWORD)this->Flags, str, strLen, &bytes[0], len, NULL, NULL);
+	len = (size_t)::WideCharToMultiByte((UINT)this->CodePage, (DWORD)this->Flags, str, (int)strLen, &bytes[0], (int)len, NULL, NULL);
 	bytes.resize(len);
 }
 
-//! •¶š—ñ‚©‚çƒoƒCƒg”z—ñ‚Ìæ“¾
+//! æ–‡å­—åˆ—ã‹ã‚‰ãƒã‚¤ãƒˆé…åˆ—ã®å–å¾—
 void Encoding::GetBytes(const wchar_t* str, std::string& bytes) const {
 	GetBytes(str, ::wcslen(str), bytes);
 }
 
-//! •¶š—ñ‚©‚çƒoƒCƒg”z—ñ‚Ìæ“¾
+//! æ–‡å­—åˆ—ã‹ã‚‰ãƒã‚¤ãƒˆé…åˆ—ã®å–å¾—
 void Encoding::GetBytes(const std::wstring& str, std::string& bytes) const {
 	if(str.empty())
 		return;
 	GetBytes(str.c_str(), str.size(), bytes);
 }
 
-//! •¶š—ñ‚©‚çƒoƒCƒg”z—ñ‚Ìæ“¾
+//! æ–‡å­—åˆ—ã‹ã‚‰ãƒã‚¤ãƒˆé…åˆ—ã®å–å¾—
 std::string Encoding::GetBytes(const wchar_t* str, size_t strLen) const {
 	std::string bytes;
 	GetBytes(str, strLen, bytes);
@@ -91,7 +91,7 @@ std::string Encoding::GetBytes(const wchar_t* str, size_t strLen) const {
 #endif
 }
 
-//! •¶š—ñ‚©‚çƒoƒCƒg”z—ñ‚Ìæ“¾
+//! æ–‡å­—åˆ—ã‹ã‚‰ãƒã‚¤ãƒˆé…åˆ—ã®å–å¾—
 std::string Encoding::GetBytes(const wchar_t* str) const {
 	std::string bytes;
 	GetBytes(str, ::wcslen(str), bytes);
@@ -102,7 +102,7 @@ std::string Encoding::GetBytes(const wchar_t* str) const {
 #endif
 }
 
-//! •¶š—ñ‚©‚çƒoƒCƒg”z—ñ‚Ìæ“¾
+//! æ–‡å­—åˆ—ã‹ã‚‰ãƒã‚¤ãƒˆé…åˆ—ã®å–å¾—
 std::string Encoding::GetBytes(const std::wstring& str) const {
 	if(str.empty())
 		return std::string();

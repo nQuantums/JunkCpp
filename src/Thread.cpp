@@ -280,7 +280,7 @@ ibool Event::Wait(intptr_t timeoutMs) {
 	}
 	return check_value == 0;
 #else
-	return ::WaitForSingleObject(m_hEvent, timeoutMs) == WAIT_OBJECT_0;
+	return ::WaitForSingleObject(m_hEvent, (DWORD)timeoutMs) == WAIT_OBJECT_0;
 #endif
 }
 

@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="ソース ファイル">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="ヘッダー ファイル">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="リソース ファイル">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Junk">
+      <UniqueIdentifier>{abd2f6b2-f661-475e-9248-56b7373b36b2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\Clock.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\DateTime.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Directory.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Encoding.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Error.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\File.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\FilePath.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\GlobalSocketLogger.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\JunkConfig.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\JunkDef.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Logger.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Socket.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Str.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Sync.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Thread.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ThreadLocalStorage.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\Clock.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\DateTime.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Directory.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Encoding.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Error.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\File.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\FilePath.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GlobalSocketLogger.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Socket.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Str.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Thread.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

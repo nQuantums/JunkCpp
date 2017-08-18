@@ -51,13 +51,13 @@ typedef unsigned long long uint_fast64_t;
 #define JUNKAPICLASS __declspec(dllexport)
 #define JUNKCALL __stdcall
 #elif _JUNK_IMPORTS
-#define JUNKAPI extern "C" __declspec(import)
+#define JUNKAPI extern "C" __declspec(dllimport)
 #define JUNKAPICLASS __declspec(dllimport)
 #define JUNKCALL __stdcall
 #else
 #define JUNKAPI
 #define JUNKAPICLASS
-#define JUNKCALL
+#define JUNKCALL __stdcall
 #endif
 #endif
 
