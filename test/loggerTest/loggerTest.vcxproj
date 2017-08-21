@@ -181,6 +181,7 @@
     <ClCompile Include="..\..\src\File.cpp" />
     <ClCompile Include="..\..\src\FilePath.cpp" />
     <ClCompile Include="..\..\src\GlobalSocketLogger.cpp" />
+    <ClCompile Include="..\..\src\Logger.cpp" />
     <ClCompile Include="..\..\src\Socket.cpp" />
     <ClCompile Include="..\..\src\Str.cpp" />
     <ClCompile Include="..\..\src\Thread.cpp" />

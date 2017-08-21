@@ -45,12 +45,12 @@ typedef unsigned long long uint_fast64_t;
 //  _JUNK_EXPORTS が定義されている場合はDLLエクスポート用コンパイル
 //  _JUNK_IMPORTS が定義されている場合はDLLインポート用コンパイル
 // になります
-#ifdef _MSC_VER
-#ifdef _JUNK_EXPORTS
+#if defined(_MSC_VER)
+#if defined(_JUNK_EXPORTS)
 #define JUNKAPI extern "C" __declspec(dllexport)
 #define JUNKAPICLASS __declspec(dllexport)
 #define JUNKCALL __stdcall
-#elif _JUNK_IMPORTS
+#elif defined(_JUNK_IMPORTS)
 #define JUNKAPI extern "C" __declspec(dllimport)
 #define JUNKAPICLASS __declspec(dllimport)
 #define JUNKCALL __stdcall

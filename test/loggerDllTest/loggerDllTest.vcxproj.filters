@@ -7,14 +7,14 @@
     </Filter>
     <Filter Include="ヘッダー ファイル">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
     <Filter Include="リソース ファイル">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Junk">
-      <UniqueIdentifier>{4967773b-b12d-464c-970e-96a1cc302ada}</UniqueIdentifier>
+      <UniqueIdentifier>{ba25d9ee-19df-4162-aeb4-ae5c9be799e9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -48,7 +48,16 @@
     <ClInclude Include="..\..\src\FilePath.h">
       <Filter>Junk</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Fixed.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Geom.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\GlobalSocketLogger.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\JRpc.h">
       <Filter>Junk</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\JunkConfig.h">
@@ -57,10 +66,28 @@
     <ClInclude Include="..\..\src\JunkDef.h">
       <Filter>Junk</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Logger.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Matrix.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\MMFile.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\RingBuffer.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\Socket.h">
       <Filter>Junk</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Str.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Sync.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\TemplateMeta.h">
       <Filter>Junk</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Thread.h">
@@ -69,7 +96,16 @@
     <ClInclude Include="..\..\src\ThreadLocalStorage.h">
       <Filter>Junk</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\ThreadPool.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ThreadQueue.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\TimeSpan.h">
+      <Filter>Junk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Vector.h">
       <Filter>Junk</Filter>
     </ClInclude>
   </ItemGroup>
@@ -77,44 +113,8 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="loggerTest.cpp">
+    <ClCompile Include="loggerDllTest.cpp">
       <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Clock.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\DateTime.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Directory.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Encoding.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Error.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\File.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\FilePath.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\GlobalSocketLogger.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Socket.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Str.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Thread.cpp">
-      <Filter>Junk</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\TimeSpan.cpp">
-      <Filter>Junk</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <sstream>
 #include "../../src/GlobalSocketLogger.h"
+#include "../../src/Logger.h"
 #include "../../src/Thread.h"
 #include "../../src/Error.h"
 #include "../../src/Directory.h"
@@ -121,7 +122,7 @@ struct Struct1 {
 };
 
 bool LogClientTest() {
-	jk::GlobalSocketLogger::Startup("192.168.56.1", 33777);
+	jk::GlobalSocketLogger::Startup("127.0.0.1", 33777);
 
 	for (;;) {
 		std::string line;

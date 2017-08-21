@@ -125,5 +125,8 @@
     <ClCompile Include="..\..\src\Thread.cpp">
       <Filter>Junk</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Logger.cpp">
+      <Filter>Junk</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

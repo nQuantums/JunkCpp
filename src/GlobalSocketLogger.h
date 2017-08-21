@@ -205,66 +205,8 @@ public:
 	static intptr_t GetDepth(); //!< 現在のスレッドの呼び出し深度の取得
 	static intptr_t IncrementDepth(); //!< 現在のスレッドの呼び出し深度をインクリメント
 	static intptr_t DecrementDepth(); //!< 現在のスレッドの呼び出し深度をデクリメント
-
-#pragma pack(push, 1)
-	struct Frame {
-		int64_t EnterTime; //!< フレーム開始時間
-		wchar_t* pFrameName; //!< フレーム名
-
-		Frame(const wchar_t* pszFrameName, const wchar_t* pszArgs = NULL);
-		~Frame();
-	};
-#pragma pack(pop)
 };
 
 _JUNK_END
-
-JUNKAPI void JUNKCALL jk_GlobalSocketLogger_Startup(const wchar_t* pszHost, int port);
-JUNKAPI void JUNKCALL jk_GlobalSocketLogger_FrameStart(jk::GlobalSocketLogger::Frame* pFrame, const wchar_t* pszFrameName, const wchar_t* pszArgs = NULL);
-JUNKAPI void JUNKCALL jk_GlobalSocketLogger_FrameEnd(jk::GlobalSocketLogger::Frame* pFrame);
-
-inline jk::GlobalSocketLogger::Frame::Frame(const wchar_t* pszFrameName, const wchar_t* pszArgs) {
-	jk_GlobalSocketLogger_FrameStart(this, pszArgs);
-}
-inline jk::GlobalSocketLogger::Frame::~Frame() {
-	jk_GlobalSocketLogger_FrameEnd(this);
-}
-
-#define JUNK_LOG_FUNC_ARGSVAR __jk_log_func_args__
-#define JUNK_LOG_FUNC_BEGIN std::wstringstream JUNK_LOG_FUNC_ARGSVAR
-#define JUNK_LOG_FUNC_ARGS_BEGIN(arg) std::wstringstream JUNK_LOG_FUNC_ARGSVAR; JUNK_LOG_FUNC_ARGSVAR << L#arg L" = " << (arg)
-#define JUNK_LOG_FUNC_ARGS(arg) << L", " L#arg L" = " << (arg)
-#define JUNK_LOG_FUNC_COMMIT ; jk::GlobalSocketLogger::Frame __jk_log_func__(__FUNCTIONW__, JUNK_LOG_FUNC_ARGSVAR.str().c_str())
-
-#define JUNK_LOG_FRAME_ARGSVAR(name) __jk_log_frame_ ## name ## _args__
-#define JUNK_LOG_FRAME_BEGIN(name) std::wstringstream JUNK_LOG_FRAME_ARGSVAR(name)
-#define JUNK_LOG_FRAME_ARGS_BEGIN(name, arg) std::wstringstream JUNK_LOG_FRAME_ARGSVAR(name); JUNK_LOG_FRAME_ARGSVAR(name) << L#arg L" = " << (arg)
-#define JUNK_LOG_FRAME_ARGS(arg) << L", " L#arg L" = " << (arg)
-#define JUNK_LOG_FRAME_COMMIT(name) ; jk::GlobalSocketLogger::Frame __jk_log_frame_ ## name ## __(L#name, JUNK_LOG_FRAME_ARGSVAR(name).str().c_str())
-
-#define JUNK_LOG_FUNC() JUNK_LOG_FUNC_BEGIN JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC1(arg1) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC2(arg1, arg2) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC3(arg1, arg2, arg3) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC4(arg1, arg2, arg3, arg4) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_ARGS(arg4) JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC5(arg1, arg2, arg3, arg4, arg5) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_ARGS(arg4) JUNK_LOG_FUNC_ARGS(arg5) JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC6(arg1, arg2, arg3, arg4, arg5, arg6) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_ARGS(arg4) JUNK_LOG_FUNC_ARGS(arg5) JUNK_LOG_FUNC_ARGS(arg6) JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC7(arg1, arg2, arg3, arg4, arg5, arg6, arg7) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_ARGS(arg4) JUNK_LOG_FUNC_ARGS(arg5) JUNK_LOG_FUNC_ARGS(arg6) JUNK_LOG_FUNC_ARGS(arg7) JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC8(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_ARGS(arg4) JUNK_LOG_FUNC_ARGS(arg5) JUNK_LOG_FUNC_ARGS(arg6) JUNK_LOG_FUNC_ARGS(arg7) JUNK_LOG_FUNC_ARGS(arg8) JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC9(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_ARGS(arg4) JUNK_LOG_FUNC_ARGS(arg5) JUNK_LOG_FUNC_ARGS(arg6) JUNK_LOG_FUNC_ARGS(arg7) JUNK_LOG_FUNC_ARGS(arg8) JUNK_LOG_FUNC_ARGS(arg9) JUNK_LOG_FUNC_COMMIT
-#define JUNK_LOG_FUNC10(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) JUNK_LOG_FUNC_ARGS_BEGIN(arg1) JUNK_LOG_FUNC_ARGS(arg2) JUNK_LOG_FUNC_ARGS(arg3) JUNK_LOG_FUNC_ARGS(arg4) JUNK_LOG_FUNC_ARGS(arg5) JUNK_LOG_FUNC_ARGS(arg6) JUNK_LOG_FUNC_ARGS(arg7) JUNK_LOG_FUNC_ARGS(arg8) JUNK_LOG_FUNC_ARGS(arg9) JUNK_LOG_FUNC_ARGS(arg10) JUNK_LOG_FUNC_COMMIT
-
-#define JUNK_LOG_FRAME(name) JUNK_LOG_FRAME_BEGIN(name) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME1(name, arg1) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME2(name, arg1, arg2) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME3(name, arg1, arg2, arg3) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME4(name, arg1, arg2, arg3, arg4) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_ARGS(arg4) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME5(name, arg1, arg2, arg3, arg4, arg5) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_ARGS(arg4) JUNK_LOG_FRAME_ARGS(arg5) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME6(name, arg1, arg2, arg3, arg4, arg5, arg6) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_ARGS(arg4) JUNK_LOG_FRAME_ARGS(arg5) JUNK_LOG_FRAME_ARGS(arg6) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME7(name, arg1, arg2, arg3, arg4, arg5, arg6, arg7) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_ARGS(arg4) JUNK_LOG_FRAME_ARGS(arg5) JUNK_LOG_FRAME_ARGS(arg6) JUNK_LOG_FRAME_ARGS(arg7) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME8(name, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_ARGS(arg4) JUNK_LOG_FRAME_ARGS(arg5) JUNK_LOG_FRAME_ARGS(arg6) JUNK_LOG_FRAME_ARGS(arg7) JUNK_LOG_FRAME_ARGS(arg8) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME9(name, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_ARGS(arg4) JUNK_LOG_FRAME_ARGS(arg5) JUNK_LOG_FRAME_ARGS(arg6) JUNK_LOG_FRAME_ARGS(arg7) JUNK_LOG_FRAME_ARGS(arg8) JUNK_LOG_FRAME_ARGS(arg9) JUNK_LOG_FRAME_COMMIT(name)
-#define JUNK_LOG_FRAME10(name, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) JUNK_LOG_FRAME_ARGS_BEGIN(name, arg1) JUNK_LOG_FRAME_ARGS(arg2) JUNK_LOG_FRAME_ARGS(arg3) JUNK_LOG_FRAME_ARGS(arg4) JUNK_LOG_FRAME_ARGS(arg5) JUNK_LOG_FRAME_ARGS(arg6) JUNK_LOG_FRAME_ARGS(arg7) JUNK_LOG_FRAME_ARGS(arg8) JUNK_LOG_FRAME_ARGS(arg9) JUNK_LOG_FRAME_ARGS(arg10) JUNK_LOG_FRAME_COMMIT(name)
-
 
 #endif
