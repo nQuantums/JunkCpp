@@ -173,6 +173,7 @@ namespace LogViewer {
                 return;
 
             var records = _LogDocument.Records;
+            var index = frame.IsStartValid ? frame.StartRecordIndex : frame.EndRecordIndex;
 
             frame.Color = ColorTable[ColorIndex++ % ColorTable.Length];
             _MarkedFrames.Add(frame);
@@ -180,14 +181,14 @@ namespace LogViewer {
 
             var lvi = new ListViewItem();
             lvi.UseItemStyleForSubItems = false;
-            lvi.Text = records[frame.StartRecordIndex].DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff");
-            lvi.SubItems.Add((records[frame.EndRecordIndex].DateTime - records[frame.StartRecordIndex].DateTime).ToString(@"hh\:mm\:ss\.fff"));
+            lvi.Text = records[index].DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff");
+            lvi.SubItems.Add((frame.IsStartValid && frame.IsEndValid) ? (records[frame.EndRecordIndex].DateTime - records[frame.StartRecordIndex].DateTime).ToString(@"hh\:mm\:ss\.fff") : "?");
             lvi.SubItems.Add((frame.IsStartValid ? (frame.StartRecordIndex + 1).ToString() : "") + "～" + (frame.IsEndValid ? (frame.EndRecordIndex + 1).ToString() : ""));
             lvi.SubItems.Add("");
             lvi.SubItems.Add(frame.Ip);
             lvi.SubItems.Add(frame.Pid.ToString());
             lvi.SubItems.Add(frame.Tid.ToString());
-            lvi.SubItems.Add(_LogDocument.Records[frame.StartRecordIndex].FrameName);
+            lvi.SubItems.Add(_LogDocument.Records[index].FrameName);
             lvi.SubItems[3].BackColor = frame.Color;
             this.lvSelRanges.Items.Add(lvi);
         }
