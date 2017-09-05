@@ -23,6 +23,9 @@
 #endif
 
 
+static JUNK_TLS(bool) s_Recurse;
+
+
 //==============================================================================
 //		エクスポート関数
 
@@ -31,6 +34,11 @@ JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_Startup(const wchar_t* pszHost, int 
 }
 
 JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameStart(jk_Logger_Frame* pFrame, const wchar_t* pszFrameName, const wchar_t* pszArgs) {
+	// APIフックからも呼ばれるため再入防止
+	if(s_Recurse.Get())
+		return;
+	s_Recurse.Get() = true;
+
 	pFrame->EnterTime = jk::Clock::SysNS();
 #if defined _MSC_VER
 	size_t len = wcslen(pszFrameName);
@@ -49,9 +57,16 @@ JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameStart(jk_Logger_Frame* pFrame, 
 #else
 #error gcc version is not implemented.
 #endif
+
+	s_Recurse.Get() = false;
 }
 
 JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameEnd(jk_Logger_Frame* pFrame) {
+	// APIフックからも呼ばれるため再入防止
+	if(s_Recurse.Get())
+		return;
+	s_Recurse.Get() = true;
+
 #if defined _MSC_VER
 	std::wstringstream ss;
 
@@ -65,4 +80,6 @@ JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameEnd(jk_Logger_Frame* pFrame) {
 #else
 #error gcc version is not implemented.
 #endif
+
+	s_Recurse.Get() = false;
 }
