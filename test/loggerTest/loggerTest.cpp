@@ -119,6 +119,9 @@ struct Struct1 {
 			JUNK_LOG_FRAME4(Frame, a, b, c, d);
 		}
 	}
+	void Func5(const wchar_t* msg) {
+		JUNK_LOG_FUNC1(msg);
+	}
 };
 
 bool LogClientTest() {
@@ -132,8 +135,11 @@ bool LogClientTest() {
 		} else if (line == "func") {
 			Struct1 s1;
 			s1.Func();
-			for (int i = 0; i < 10; i++)
+			for (int i = 0; i < 10000000; i++) {
 				s1.Func1(i + 1);
+				s1.Func5(L"メッセージだよ");
+				s1.Func5(L"メッセージだよ\r\n改行ありだよ");
+			}
 		} else if (line == "flush") {
 			jk::GlobalSocketLogger::Flush();
 		} else if (line == "fclose") {
@@ -178,6 +184,7 @@ bool LogClientTestDll() {
 			Struct1 s1;
 			for (int i = 0; i < 10; i++)
 				s1.Func1(i + 1);
+			s1.Func5(L"メッセージだよ");
 		} else if (line == "flush") {
 			jk::GlobalSocketLogger::Flush();
 		} else if (line == "fclose") {

@@ -181,14 +181,14 @@ namespace LogViewer {
 
             var lvi = new ListViewItem();
             lvi.UseItemStyleForSubItems = false;
-            lvi.Text = records[index].DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff");
-            lvi.SubItems.Add((frame.IsStartValid && frame.IsEndValid) ? (records[frame.EndRecordIndex].DateTime - records[frame.StartRecordIndex].DateTime).ToString(@"hh\:mm\:ss\.fff") : "?");
+            lvi.Text = records[index].GetCore(_LogDocument.Dmmv).DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff");
+            lvi.SubItems.Add((frame.IsStartValid && frame.IsEndValid) ? (records[frame.EndRecordIndex].GetCore(_LogDocument.Dmmv).DateTime - records[frame.StartRecordIndex].GetCore(_LogDocument.Dmmv).DateTime).ToString(@"hh\:mm\:ss\.fff") : "?");
             lvi.SubItems.Add((frame.IsStartValid ? (frame.StartRecordIndex + 1).ToString() : "") + "～" + (frame.IsEndValid ? (frame.EndRecordIndex + 1).ToString() : ""));
             lvi.SubItems.Add("");
             lvi.SubItems.Add(frame.Ip);
             lvi.SubItems.Add(frame.Pid.ToString());
             lvi.SubItems.Add(frame.Tid.ToString());
-            lvi.SubItems.Add(_LogDocument.Records[index].FrameName);
+            lvi.SubItems.Add(_LogDocument.Records[index].GetCore(_LogDocument.Dmmv).FrameName);
             lvi.SubItems[3].BackColor = frame.Color;
             this.lvSelRanges.Items.Add(lvi);
         }
@@ -243,7 +243,8 @@ namespace LogViewer {
             var end = Math.Min(_LogDocument.EndRecordIndex, frame.EndRecordIndex - 1);
 			for (int i = start; i < end; i++) {
 				var r = records[i];
-                if (r.Ip == frame.Ip && r.Pid == frame.Pid && r.Tid == frame.Tid)
+				var c = r.GetCore(_LogDocument.Dmmv);
+                if (c.Ip == frame.Ip && c.Pid == frame.Pid && c.Tid == frame.Tid)
                     sameThreadRecordIndicesRecords.Add(i);
                 else
                     otherThreadRecordIndicesRecords.Add(i);
@@ -304,7 +305,8 @@ namespace LogViewer {
                 for (int i = start; i <= end; i++)
                 {
                     var r = records[i];
-                    if ((args.Ip == null || r.Ip == args.Ip) && (args.Pid == 0 || r.Pid == args.Pid) && (args.Tid == 0 || r.Tid == args.Tid) && (args.Method == null || 0 <= r.FrameName.IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase)))
+					var c = r.GetCore(_LogDocument.Dmmv);
+                    if ((args.Ip == null || c.Ip == args.Ip) && (args.Pid == 0 || c.Pid == args.Pid) && (args.Tid == 0 || c.Tid == args.Tid) && (args.Method == null || 0 <= c.FrameName.IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase)))
                     {
                         result.Add(i);
                         if (result.Count == countMax)
@@ -319,7 +321,8 @@ namespace LogViewer {
                 for (int i = start; end <= i; i--)
                 {
                     var r = records[i];
-                    if ((args.Ip == null || r.Ip == args.Ip) && (args.Pid == 0 || r.Pid == args.Pid) && (args.Tid == 0 || r.Tid == args.Tid) && (args.Method == null || 0 <= r.FrameName.IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase)))
+					var c = r.GetCore(_LogDocument.Dmmv);
+                    if ((args.Ip == null || c.Ip == args.Ip) && (args.Pid == 0 || c.Pid == args.Pid) && (args.Tid == 0 || c.Tid == args.Tid) && (args.Method == null || 0 <= c.FrameName.IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase)))
                     {
                         result.Add(i);
                         if (result.Count == countMax)
@@ -464,13 +467,13 @@ namespace LogViewer {
 
         void Reopen()
         {
-            SetDocument(new LogDocument(_LogDocument.FileName, Record.ReadFromCsv(_LogDocument.FileName)));
+			SetDocument(new LogDocument(_LogDocument.FileName, MemMapRecord.ReadFromBinLog(_LogDocument.FileName)));
         }
 
 		private void tsmiOpen_Click(object sender, EventArgs e) {
 			//OpenFileDialogクラスのインスタンスを作成
 			using (var ofd = new OpenFileDialog()) {
-				ofd.Filter = "CSVファイル(*.csv)|*.csv|すべてのファイル(*.*)|*.*";
+				ofd.Filter = "バイナリログファイル(*.binlog)|*.binlog|すべてのファイル(*.*)|*.*";
 				ofd.FilterIndex = 0;
 				ofd.Title = "開くログファイルを選択してください";
 				ofd.CheckFileExists = true;
@@ -478,7 +481,7 @@ namespace LogViewer {
 				if (ofd.ShowDialog() != DialogResult.OK)
 					return;
 
-                SetDocument(new LogDocument(ofd.FileName, Record.ReadFromCsv(ofd.FileName)));
+				SetDocument(new LogDocument(ofd.FileName, MemMapRecord.ReadFromBinLog(ofd.FileName)));
 			}
 		}
 
@@ -602,23 +605,24 @@ namespace LogViewer {
                 return;
 
             var record = _LogDocument.Records[recordIndex];
+			var core = record.GetCore(_LogDocument.Dmmv);
 
 			e.Item = new ListViewItem();
 			e.Item.UseItemStyleForSubItems = false;
 			e.Item.Text = (record.Index + 1).ToString();
-			e.Item.SubItems.Add(record.DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff"));
-			e.Item.SubItems.Add(record.Ip);
-			e.Item.SubItems.Add(record.Pid.ToString());
-			e.Item.SubItems.Add(record.Tid.ToString());
-			e.Item.SubItems.Add(record.Enter ? "Enter" : "Leave");
-			e.Item.SubItems.Add(new string('　', record.Depth) + record.FrameName);
+			e.Item.SubItems.Add(core.DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff"));
+			e.Item.SubItems.Add(core.Ip);
+			e.Item.SubItems.Add(core.Pid.ToString());
+			e.Item.SubItems.Add(core.Tid.ToString());
+			e.Item.SubItems.Add(core.LogType == MemMapRecord.LogType.Enter ? "Enter" : "Leave");
+			e.Item.SubItems.Add(new string('　', core.Depth) + core.FrameName);
 
 			for (int sel = _MarkedFrames.Count; sel != -1; sel--) {
 				var frame = sel == _MarkedFrames.Count ? this.CurrentFrame : _MarkedFrames[sel];
                 if (!frame.IsValid)
                     continue;
 
-                if (frame.Ip == record.Ip && frame.Pid == record.Pid && frame.Tid == record.Tid) {
+                if (frame.Ip == core.Ip && frame.Pid == core.Pid && frame.Tid == core.Tid) {
                     if (frame.StartRecordIndex <= recordIndex && recordIndex <= frame.EndRecordIndex)
                     {
                         var n = e.Item.SubItems.Count;
@@ -641,15 +645,16 @@ namespace LogViewer {
 
             var recordIndex = recordIndices[index];
             var record = _LogDocument.Records[recordIndex];
+			var core = record.GetCore(_LogDocument.Dmmv);
 
             e.Item = new ListViewItem();
             e.Item.UseItemStyleForSubItems = false;
             e.Item.Text = (record.Index + 1).ToString();
-            e.Item.SubItems.Add(record.DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff"));
-            e.Item.SubItems.Add(record.Ip);
-            e.Item.SubItems.Add(record.Pid.ToString());
-            e.Item.SubItems.Add(record.Tid.ToString());
-            e.Item.SubItems.Add(new string('　', record.Depth) + record.FrameName);
+            e.Item.SubItems.Add(core.DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff"));
+            e.Item.SubItems.Add(core.Ip);
+            e.Item.SubItems.Add(core.Pid.ToString());
+            e.Item.SubItems.Add(core.Tid.ToString());
+            e.Item.SubItems.Add(new string('　', core.Depth) + core.FrameName);
         }
 
 		private void LvOtherThread_RetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e) {
@@ -660,15 +665,16 @@ namespace LogViewer {
 
             var recordIndex = recordIndices[index];
             var record = _LogDocument.Records[recordIndex];
+			var core = record.GetCore(_LogDocument.Dmmv);
 
             e.Item = new ListViewItem();
             e.Item.UseItemStyleForSubItems = false;
             e.Item.Text = (record.Index + 1).ToString();
-            e.Item.SubItems.Add(record.DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff"));
-            e.Item.SubItems.Add(record.Ip);
-            e.Item.SubItems.Add(record.Pid.ToString());
-            e.Item.SubItems.Add(record.Tid.ToString());
-            e.Item.SubItems.Add(new string('　', record.Depth) + record.FrameName);
+            e.Item.SubItems.Add(core.DateTime.ToString("yyyy/MM/dd HH:mm:ss.fff"));
+            e.Item.SubItems.Add(core.Ip);
+            e.Item.SubItems.Add(core.Pid.ToString());
+            e.Item.SubItems.Add(core.Tid.ToString());
+            e.Item.SubItems.Add(new string('　', core.Depth) + core.FrameName);
         }
 
         private void btnMarksToClipBoard_Click(object sender, EventArgs e)
@@ -742,7 +748,7 @@ namespace LogViewer {
 
             var document = new LogDocument(
                 _LogDocument.FileName,
-                _LogDocument.Records,
+				new Tuple<MemMapFile, DynamicMemMapView, MemMapRecord[]>(_LogDocument.MemMapFile, _LogDocument.Dmmv, _LogDocument.Records),
                 frame.StartRecordIndex,
                 frame.EndRecordIndex);
 

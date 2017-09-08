@@ -23,7 +23,7 @@
 
 _JUNK_BEGIN
 
-static Encoding g_Enc = Encoding::ASCII();
+static Encoding g_Enc = Encoding::UTF8();
 
 
 //! 指定サイズまできっちり送信する、指定サイズに満たないで終了するならエラーとなる
@@ -268,7 +268,7 @@ void LogServer::Cleanup() {
 
 LogServer::LogServer() {
 	m_RequestStop = false;
-	m_BinaryLog = false;
+	m_BinaryLog = true;
 	m_CommandWriteLogHandler = NULL;
 }
 
@@ -434,7 +434,7 @@ void LogServer::CommandWriteLog(SocketRef sock, PktCommandLogWrite* pCmd, const 
 		buf.insert(buf.end(), (uint8_t*)&remoteNameSize, (uint8_t*)&remoteNameSize + sizeof(remoteNameSize));
 		if (remoteNameSize)
 			buf.insert(buf.end(), (uint8_t*)&remoteName[0], (uint8_t*)&remoteName[0] + remoteNameSize);
-		buf.insert(buf.end(), (uint8_t*)pCmd->Pid, (uint8_t*)pCmd->Pid + writePacketSize);
+		buf.insert(buf.end(), (uint8_t*)&pCmd->Pid, (uint8_t*)&pCmd->Pid + writePacketSize);
 
 		// ファイルへ書き込み
 		Write((const char*)&buf[0], buf.size());

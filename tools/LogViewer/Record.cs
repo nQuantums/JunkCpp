@@ -9,6 +9,8 @@ namespace LogViewer {
 	public struct Record {
         public const int NoCached = int.MinValue;
 
+		public ulong Address;
+
         public int Index;
 		public DateTime DateTime;
 		public string Ip;

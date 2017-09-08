@@ -43,7 +43,7 @@ public:
 #if (defined _MSC_VER) && (_MSC_VER <= 1500)
 	enum LogTypeEnum {
 #else
-	enum class LogTypeEnum : uint8_t {
+	enum class LogTypeEnum : uint16_t {
 #endif
 		Enter = 1,
 		Leave = 2,
@@ -92,8 +92,8 @@ public:
 	struct PktCommandLogWrite : public Pkt {
 		uint32_t Pid; //!< プロセスID
 		uint32_t Tid; //!< スレッドID
-		uint32_t Depth; //!< 呼び出し階層深度
-		uint8_t LogType; //!< ログ種類
+		uint16_t Depth; //!< 呼び出し階層深度
+		uint16_t LogType; //!< ログ種類
 		char Text[1]; //!< UTF-8エンコードされた文字列データ
 
 		//! テキストサイズ(bytes)
@@ -101,12 +101,12 @@ public:
 			return this->Size - sizeof(this->Command) - sizeof(this->Pid) - sizeof(this->Tid) - sizeof(this->Depth) - sizeof(this->LogType);
 		}
 
-		static PktCommandLogWrite* Allocate(uint32_t pid, uint32_t tid, uint32_t depth, LogTypeEnum logType, const char* pszText, size_t size) {
-			PktCommandLogWrite* pPkt = (PktCommandLogWrite*)Pkt::Allocate(CommandEnum::WriteLog, sizeof(uint32_t) * 3 + sizeof(uint8_t) + size);
+		static PktCommandLogWrite* Allocate(uint32_t pid, uint32_t tid, uint16_t depth, LogTypeEnum logType, const char* pszText, size_t size) {
+			PktCommandLogWrite* pPkt = (PktCommandLogWrite*)Pkt::Allocate(CommandEnum::WriteLog, sizeof(pPkt->Pid) + sizeof(pPkt->Tid) + sizeof(pPkt->Depth) + sizeof(pPkt->LogType) + size);
 			pPkt->Pid = pid;
 			pPkt->Tid = tid;
 			pPkt->Depth = depth;
-			pPkt->LogType = (uint8_t)logType;
+			pPkt->LogType = (uint16_t)logType;
 			memcpy(pPkt->Text, pszText, size);
 			return pPkt;
 		}

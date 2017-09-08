@@ -122,18 +122,19 @@ namespace LogViewer
 
             var records = document.Records;
             var curRecord = records[index];
+			var core = curRecord.GetCore(document.Dmmv);
             var frame = new Frame();
             frame.StartRecordIndex = index;
             frame.EndRecordIndex = index;
-            frame.Ip = curRecord.Ip;
-            frame.Pid = curRecord.Pid;
-            frame.Tid = curRecord.Tid;
-            frame.Depth = curRecord.Depth;
+            frame.Ip = core.Ip;
+            frame.Pid = core.Pid;
+            frame.Tid = core.Tid;
+            frame.Depth = core.Depth;
 
             // キャッシュにペアインデックスが記録されているならそっちを使用
             if (curRecord.CachedPairIndex != Record.NoCached)
             {
-                if (curRecord.Enter)
+                if (core.Enter)
                 {
                     frame.EndRecordIndex = curRecord.CachedPairIndex;
                 }
@@ -146,7 +147,7 @@ namespace LogViewer
             }
 
             // 開始または終了レコードを探す
-            if (curRecord.Enter)
+            if (core.Enter)
             {
                 frame.EndRecordIndex = NullEndIndex;
 
@@ -157,15 +158,16 @@ namespace LogViewer
                     CancelInfo.Handle(cancelInfo);
 
                     var r = records[i];
-                    if (r.Ip != frame.Ip)
+					var c = r.GetCore(document.Dmmv);
+                    if (c.Ip != frame.Ip)
                         continue;
-                    if (r.Pid != frame.Pid)
+                    if (c.Pid != frame.Pid)
                         continue;
-                    if (r.Tid != frame.Tid)
+                    if (c.Tid != frame.Tid)
                         continue;
-                    if (r.Depth < frame.Depth)
+                    if (c.Depth < frame.Depth)
                         break;
-                    if (r.Depth == frame.Depth && !r.Enter)
+                    if (c.Depth == frame.Depth && !c.Enter)
                     {
                         frame.EndRecordIndex = i;
                         break;
@@ -186,15 +188,16 @@ namespace LogViewer
                     CancelInfo.Handle(cancelInfo);
 
                     var r = records[i];
-                    if (r.Ip != frame.Ip)
+					var c = r.GetCore(document.Dmmv);
+                    if (c.Ip != frame.Ip)
                         continue;
-                    if (r.Pid != frame.Pid)
+                    if (c.Pid != frame.Pid)
                         continue;
-                    if (r.Tid != frame.Tid)
+                    if (c.Tid != frame.Tid)
                         continue;
-                    if (r.Depth < frame.Depth)
+                    if (c.Depth < frame.Depth)
                         break;
-                    if (r.Depth == frame.Depth && r.Enter)
+                    if (c.Depth == frame.Depth && c.Enter)
                     {
                         frame.StartRecordIndex = i;
                         break;
@@ -238,15 +241,16 @@ namespace LogViewer
                 CancelInfo.Handle(cancelInfo);
 
                 var r = records[i];
-                if (r.Ip != frame.Ip)
+				var c = r.GetCore(document.Dmmv);
+                if (c.Ip != frame.Ip)
                     continue;
-                if (r.Pid != frame.Pid)
+                if (c.Pid != frame.Pid)
                     continue;
-                if (r.Tid != frame.Tid)
+                if (c.Tid != frame.Tid)
                     continue;
-                if (r.Depth < frame.Depth)
+                if (c.Depth < frame.Depth)
                     break;
-                if (r.Depth == frame.Depth && r.Enter)
+                if (c.Depth == frame.Depth && c.Enter)
                 {
                     records[frame.StartRecordIndex].CachedParentIndex = i;
                     if (frame.IsEndValid)
@@ -281,13 +285,14 @@ namespace LogViewer
                 CancelInfo.Handle(cancelInfo);
 
                 var r = records[i];
-                if (r.Ip != frame.Ip)
+				var c = r.GetCore(document.Dmmv);
+                if (c.Ip != frame.Ip)
                     continue;
-                if (r.Pid != frame.Pid)
+                if (c.Pid != frame.Pid)
                     continue;
-                if (r.Tid != frame.Tid)
+                if (c.Tid != frame.Tid)
                     continue;
-                if (r.Depth == frame.Depth && r.Enter)
+                if (c.Depth == frame.Depth && c.Enter)
                     return Search(document, i, cancelInfo);
             }
 
@@ -319,15 +324,16 @@ namespace LogViewer
                 CancelInfo.Handle(cancelInfo);
 
                 var r = records[i];
-                if (r.Ip != frame.Ip)
+				var c = r.GetCore(document.Dmmv);
+                if (c.Ip != frame.Ip)
                     continue;
-                if (r.Pid != frame.Pid)
+                if (c.Pid != frame.Pid)
                     continue;
-                if (r.Tid != frame.Tid)
+                if (c.Tid != frame.Tid)
                     continue;
-                if (r.Depth < frame.Depth)
+                if (c.Depth < frame.Depth)
                     break;
-                if (r.Depth == frame.Depth && r.Enter)
+                if (c.Depth == frame.Depth && c.Enter)
                     return i;
             }
 
@@ -358,15 +364,16 @@ namespace LogViewer
                 CancelInfo.Handle(cancelInfo);
 
                 var r = records[i];
-                if (r.Ip != frame.Ip)
+				var c = r.GetCore(document.Dmmv);
+                if (c.Ip != frame.Ip)
                     continue;
-                if (r.Pid != frame.Pid)
+                if (c.Pid != frame.Pid)
                     continue;
-                if (r.Tid != frame.Tid)
+                if (c.Tid != frame.Tid)
                     continue;
-                if (r.Depth < frame.Depth)
+                if (c.Depth < frame.Depth)
                     break;
-                if (r.Depth == frame.Depth && r.Enter)
+                if (c.Depth == frame.Depth && c.Enter)
                     return i;
             }
 
@@ -386,7 +393,7 @@ namespace LogViewer
                 return "";
 
             var records = document.Records;
-            var frameRecords = new List<Record>();
+            var frameRecords = new List<MemMapRecord>();
             frameRecords.Add(records[frame.StartRecordIndex]);
 
             var f = frame;
@@ -403,7 +410,8 @@ namespace LogViewer
             for (int i = frameRecords.Count - 1; i != -1; i--)
             {
                 var r = frameRecords[i];
-                sb.AppendLine(new string(' ', r.Depth * 4) + r.FrameName);
+				var c = r.GetCore(document.Dmmv);
+                sb.AppendLine(new string(' ', c.Depth * 4) + c.FrameName);
             }
 
             return sb.ToString();

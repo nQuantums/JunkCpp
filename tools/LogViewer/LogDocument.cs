@@ -10,7 +10,9 @@ namespace LogViewer
     {
         public string FileName = "";
         public string Title = "";
-        public Record[] Records = new Record[0];
+		public MemMapFile MemMapFile;
+		public DynamicMemMapView Dmmv;
+		public MemMapRecord[] Records = new MemMapRecord[0];
         public int StartRecordIndex = 0;
         public int EndRecordIndex = -1;
 
@@ -26,10 +28,12 @@ namespace LogViewer
         {
         }
 
-        public LogDocument(string fileName, Record[] records, int startRecordIndex = Frame.NullStartIndex, int endRecordIndex = Frame.NullEndIndex)
+        public LogDocument(string fileName, Tuple<MemMapFile, DynamicMemMapView, MemMapRecord[]> data, int startRecordIndex = Frame.NullStartIndex, int endRecordIndex = Frame.NullEndIndex)
         {
             this.FileName = fileName;
-            this.Records = records;
+			this.MemMapFile = data.Item1;
+			this.Dmmv = data.Item2;
+			this.Records = data.Item3;
 
             if (startRecordIndex < 0)
                 startRecordIndex = 0;
@@ -41,7 +45,7 @@ namespace LogViewer
 
             this.Title = this.FileName;
             if (this.StartRecordIndex != 0 || this.EndRecordIndex != this.Records.Length - 1)
-                this.Title += "(" + (this.StartRecordIndex + 1) + "～" + (this.EndRecordIndex + 1) + ") " + this.Records[this.StartRecordIndex].FrameName;
+                this.Title += "(" + (this.StartRecordIndex + 1) + "～" + (this.EndRecordIndex + 1) + ") " + this.Records[this.StartRecordIndex].GetCore(this.Dmmv).FrameName;
         }
 
         public bool IsValidIndex(int index)
