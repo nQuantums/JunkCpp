@@ -134,10 +134,10 @@ bool LogClientTest() {
 			break;
 		} else if (line == "func") {
 			Struct1 s1;
-			s1.Func();
+			//s1.Func();
 			for (int i = 0; i < 10000000; i++) {
-				s1.Func1(i + 1);
-				s1.Func5(L"メッセージだよ");
+				//s1.Func1(i + 1);
+				//s1.Func5(L"メッセージだよ");
 				s1.Func5(L"メッセージだよ\r\n改行ありだよ");
 			}
 		} else if (line == "flush") {

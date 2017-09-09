@@ -27,7 +27,7 @@ static Encoding g_Enc = Encoding::UTF8();
 
 
 //! 指定サイズまできっちり送信する、指定サイズに満たないで終了するならエラーとなる
-static intptr_t SendToBytes(SocketRef sock, const void* pBuf, intptr_t size) {
+static inline intptr_t SendToBytes(SocketRef sock, const void* pBuf, intptr_t size) {
 	intptr_t len = 0;
 	while (size) {
 		intptr_t n = sock.Send((char*)pBuf + len, size);
@@ -44,7 +44,7 @@ static intptr_t SendToBytes(SocketRef sock, const void* pBuf, intptr_t size) {
 }
 
 //! 指定サイズまできっちり受信する、指定サイズに満たないで終了するならエラーとなる
-static intptr_t RecvToBytes(SocketRef sock, void* pBuf, intptr_t size) {
+static inline intptr_t RecvToBytes(SocketRef sock, void* pBuf, intptr_t size) {
 	intptr_t len = 0;
 	while(size) {
 		intptr_t n = sock.Recv((char*)pBuf + len, size);
@@ -81,6 +81,8 @@ private:
 };
 
 JUNK_TLS(intptr_t) GlobalSocketLogger::Instance::s_Depth;
+static JUNK_TLS(char[256]) s_Buf1;
+static JUNK_TLS(char[256]) s_Buf2;
 
 static GlobalSocketLogger::Instance g_Instance;
 static GlobalSocketLogger::Instance* g_pInstance = &g_Instance;
@@ -170,7 +172,7 @@ void GlobalSocketLogger::Cleanup() {
 }
 
 //! サーバーへコマンドパケットを送り応答を取得する
-LogServer::Pkt* GlobalSocketLogger::Command(LogServer::Pkt* pCmd) {
+LogServer::Pkt* GlobalSocketLogger::Command(LogServer::TempBuf tempBuf, LogServer::Pkt* pCmd) {
 	// 送って受け取るまでを排他処理とする
 	CriticalSectionLock lock(&g_pInstance->CS);
 	SocketRef sock = GetSocket();
@@ -186,9 +188,9 @@ LogServer::Pkt* GlobalSocketLogger::Command(LogServer::Pkt* pCmd) {
 		return NULL;
 
 	// 残りのパケット全体を受信
-	LogServer::Pkt* pResult = LogServer::Pkt::Allocate(result.Size);
+	LogServer::Pkt* pResult = LogServer::Pkt::Allocate(tempBuf, result.Size);
 	if(RecvToBytes(sock, &pResult->Command, result.Size) < result.Size) {
-		LogServer::Pkt::Deallocate(pResult);
+		LogServer::Pkt::Deallocate(tempBuf, pResult);
 		return NULL;
 	}
 
@@ -197,8 +199,14 @@ LogServer::Pkt* GlobalSocketLogger::Command(LogServer::Pkt* pCmd) {
 
 //! サーバーのログ出力形式をバイナリかどうか設定する、スレッドセーフ
 void GlobalSocketLogger::BinaryLog(bool binary) {
-	std::auto_ptr<LogServer::PktCommandBinaryLog> pCmd(LogServer::PktCommandBinaryLog::Allocate(binary));
-	std::auto_ptr<LogServer::Pkt> pResult(Command(pCmd.get()));
+	LogServer::TempBuf tb1(&s_Buf1.Get()[0], sizeof(s_Buf1.Value));
+	LogServer::TempBuf tb2(&s_Buf2.Get()[0], sizeof(s_Buf2.Value));
+	std::auto_ptr<LogServer::PktCommandBinaryLog> pCmd(LogServer::PktCommandBinaryLog::Allocate(tb1, binary));
+	std::auto_ptr<LogServer::Pkt> pResult(Command(tb2, pCmd.get()));
+	if (pCmd.get() == tb1.Ptr)
+		pCmd.release();
+	if (pResult.get() == tb2.Ptr)
+		pResult.release();
 }
 
 //! サーバーへログを送る、スレッドセーフ
@@ -210,15 +218,22 @@ void GlobalSocketLogger::WriteLog(uint32_t depth, LogServer::LogTypeEnum logType
 	std::string bytes;
 	g_Enc.GetBytes(pszText, textLen, bytes);
 
+	LogServer::TempBuf tb1(&s_Buf1.Get()[0], sizeof(s_Buf1.Value));
+	LogServer::TempBuf tb2(&s_Buf2.Get()[0], sizeof(s_Buf2.Value));
 	std::auto_ptr<LogServer::PktCommandLogWrite> pCmd(
 		LogServer::PktCommandLogWrite::Allocate(
+			tb1,
 			::GetCurrentProcessId(),
 			::GetCurrentThreadId(),
 			depth,
 			logType,
 			&bytes[0],
 			bytes.size()));
-	std::auto_ptr<LogServer::Pkt> pResult(Command(pCmd.get()));
+	std::auto_ptr<LogServer::Pkt> pResult(Command(tb2, pCmd.get()));
+	if (pCmd.get() == tb1.Ptr)
+		pCmd.release();
+	if (pResult.get() == tb2.Ptr)
+		pResult.release();
 }
 
 //! サーバーへログをファイルへフラッシュ要求
@@ -226,7 +241,10 @@ void GlobalSocketLogger::Flush() {
 	LogServer::Pkt cmd;
 	cmd.Size = sizeof(cmd.Command);
 	cmd.Command = (uint32_t)LogServer::CommandEnum::Flush;
-	std::auto_ptr<LogServer::Pkt> pResult(Command(&cmd));
+	LogServer::TempBuf tb2(&s_Buf2.Get()[0], sizeof(s_Buf2.Value));
+	std::auto_ptr<LogServer::Pkt> pResult(Command(tb2, &cmd));
+	if (pResult.get() == tb2.Ptr)
+		pResult.release();
 }
 
 //! サーバーへ現在のログファイルを閉じる要求
@@ -234,7 +252,10 @@ void GlobalSocketLogger::FileClose() {
 	LogServer::Pkt cmd;
 	cmd.Size = sizeof(cmd.Command);
 	cmd.Command = (uint32_t)LogServer::CommandEnum::FileClose;
-	std::auto_ptr<LogServer::Pkt> pResult(Command(&cmd));
+	LogServer::TempBuf tb2(&s_Buf2.Get()[0], sizeof(s_Buf2.Value));
+	std::auto_ptr<LogServer::Pkt> pResult(Command(tb2, &cmd));
+	if (pResult.get() == tb2.Ptr)
+		pResult.release();
 }
 
 //! 現在のスレッドの呼び出し深度の取得

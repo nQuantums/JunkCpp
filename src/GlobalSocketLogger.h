@@ -50,6 +50,17 @@ public:
 	};
 
 #pragma pack(push, 1)
+	//! コマンド作成時の new 抑止用一時バッファ情報
+	struct TempBuf {
+		void* Ptr;
+		size_t Size;
+
+		TempBuf(void* p, size_t size) {
+			this->Ptr = p;
+			this->Size = size;
+		}
+	};
+
 	//! サーバーへのコマンド、応答パケット基本クラス
 	struct Pkt {
 		int32_t Size; // 以降に続くパケットバイト数
@@ -63,27 +74,27 @@ public:
 			return sizeof(this->Size) + this->Size;
 		}
 
-		static Pkt* Allocate(size_t size) {
-			Pkt* pPkt = (Pkt*)new uint8_t[sizeof(pPkt->Size) + size];
+		static inline Pkt* Allocate(TempBuf tempBuf, size_t size) {
+			Pkt* pPkt = (Pkt*)(sizeof(pPkt->Size) + size <= tempBuf.Size ? tempBuf.Ptr : new uint8_t[sizeof(pPkt->Size) + size]);
 			pPkt->Size = (int32_t)size;
 			return pPkt;
 		}
 
-		static Pkt* Allocate(CommandEnum command, size_t dataSize) {
-			Pkt* pPkt = Allocate(sizeof(pPkt->Command) + dataSize);
+		static inline Pkt* Allocate(TempBuf tempBuf, CommandEnum command, size_t dataSize) {
+			Pkt* pPkt = Allocate(tempBuf, sizeof(pPkt->Command) + dataSize);
 			pPkt->Command = (uint32_t)command;
 			return pPkt;
 		}
 
-		static Pkt* Allocate(CommandEnum command, const void* pData, size_t dataSize) {
-			Pkt* pPkt = Allocate(sizeof(pPkt->Command) + dataSize);
+		static inline Pkt* Allocate(TempBuf tempBuf, CommandEnum command, const void* pData, size_t dataSize) {
+			Pkt* pPkt = Allocate(tempBuf, sizeof(pPkt->Command) + dataSize);
 			pPkt->Command = (uint32_t)command;
 			memcpy(&pPkt[1], pData, dataSize);
 			return pPkt;
 		}
 
-		static void Deallocate(Pkt* pPkt) {
-			if(pPkt != NULL)
+		static inline void Deallocate(TempBuf tempBuf, Pkt* pPkt) {
+			if (pPkt != tempBuf.Ptr && pPkt != NULL)
 				delete pPkt;
 		}
 	};
@@ -101,8 +112,8 @@ public:
 			return this->Size - sizeof(this->Command) - sizeof(this->Pid) - sizeof(this->Tid) - sizeof(this->Depth) - sizeof(this->LogType);
 		}
 
-		static PktCommandLogWrite* Allocate(uint32_t pid, uint32_t tid, uint16_t depth, LogTypeEnum logType, const char* pszText, size_t size) {
-			PktCommandLogWrite* pPkt = (PktCommandLogWrite*)Pkt::Allocate(CommandEnum::WriteLog, sizeof(pPkt->Pid) + sizeof(pPkt->Tid) + sizeof(pPkt->Depth) + sizeof(pPkt->LogType) + size);
+		static PktCommandLogWrite* Allocate(TempBuf tempBuf, uint32_t pid, uint32_t tid, uint16_t depth, LogTypeEnum logType, const char* pszText, size_t size) {
+			PktCommandLogWrite* pPkt = (PktCommandLogWrite*)Pkt::Allocate(tempBuf, CommandEnum::WriteLog, sizeof(pPkt->Pid) + sizeof(pPkt->Tid) + sizeof(pPkt->Depth) + sizeof(pPkt->LogType) + size);
 			pPkt->Pid = pid;
 			pPkt->Tid = tid;
 			pPkt->Depth = depth;
@@ -116,9 +127,9 @@ public:
 	struct PktCommandBinaryLog : public Pkt {
 		int32_t Binary; //!< 0以外ならバイナリ
 
-		static PktCommandBinaryLog* Allocate(bool binary) {
+		static PktCommandBinaryLog* Allocate(TempBuf tempBuf, bool binary) {
 			int32_t binaryValue = binary;
-			PktCommandBinaryLog* pPkt = (PktCommandBinaryLog*)Pkt::Allocate(CommandEnum::BinaryLog, &binaryValue, sizeof(binaryValue));
+			PktCommandBinaryLog* pPkt = (PktCommandBinaryLog*)Pkt::Allocate(tempBuf, CommandEnum::BinaryLog, &binaryValue, sizeof(binaryValue));
 			return pPkt;
 		}
 	};
@@ -197,7 +208,7 @@ public:
 	static void Startup(wchar_t* pszIniFile = L"GlobalSocketLogger.ini"); //!< ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
 	static void Startup(Instance* pInstance); //!< 他DLLのインスタンスを指定して初期化する
     static void Cleanup(); //!< 終了処理、プログラム終了時一回だけ呼び出す、スレッドアンセーフ
-	static LogServer::Pkt* Command(LogServer::Pkt* pCmd); //!< サーバーへコマンドパケットを送り応答を取得する、スレッドセーフ
+	static LogServer::Pkt* Command(LogServer::TempBuf tempBuf, LogServer::Pkt* pCmd); //!< サーバーへコマンドパケットを送り応答を取得する、スレッドセーフ
 	static void BinaryLog(bool binary); //!< サーバーのログ出力形式をバイナリかどうか設定する、スレッドセーフ
 	static void WriteLog(uint32_t depth, LogServer::LogTypeEnum logType, const wchar_t* pszText); //!< サーバーへログを送る、スレッドセーフ
 	static void Flush(); //!< サーバーへログをファイルへフラッシュ要求、スレッドセーフ

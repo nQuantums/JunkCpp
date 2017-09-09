@@ -77,6 +77,8 @@ JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameEnd(jk_Logger_Frame* pFrame) {
 	jk::GlobalSocketLogger::WriteLog((uint32_t)jk::GlobalSocketLogger::GetDepth(), jk::LogServer::LogTypeEnum::Leave, ss.str().c_str());
 
 	jk::GlobalSocketLogger::DecrementDepth();
+
+	delete [] pFrame->pFrameName;
 #else
 #error gcc version is not implemented.
 #endif
