@@ -75,11 +75,12 @@ namespace LogViewer {
                 // 現在フレーム実行中に割り込まれた他スレッドの処理を表示
                 var sameThread = new List<int>();
                 var otherThread = new List<int>();
-                QueryFrameInternalRecordIndices(_CurrentFrame, sameThread, otherThread);
-                SetSameThreadRecordIndices(sameThread);
+				if (value.IsValid)
+					QueryFrameInternalRecordIndices(_CurrentFrame, sameThread, otherThread);
+				SetSameThreadRecordIndices(sameThread);
                 SetOtherThreadRecordIndices(otherThread);
                 // コールスタックを表示
-                this.tbCallStack.Text = Frame.GetCallStackText(_LogDocument, _CurrentFrame, null);
+                this.tbCallStack.Text = Frame.GetCallStackText(_LogDocument, _CurrentFrame.StartRecordIndex, _CurrentFrame.EndRecordIndex, null);
 			}
 		}
 

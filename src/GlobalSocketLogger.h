@@ -147,7 +147,7 @@ public:
 	void Stop(); //!< サーバー処理スレッドを停止する、スレッドアンセーフ
 	void Write(const char* bytes, size_t size); //!< ログファイルへ書き込む
 	void CommandBinaryLog(SocketRef sock, PktCommandBinaryLog* pCmd); //!< バイナリ形式でログ出力するかどうか設定する
-	void CommandWriteLog(SocketRef sock, PktCommandLogWrite* pCmd, const std::string& remoteName); //!< ログ出力コマンド処理
+	void CommandWriteLog(std::vector<uint8_t>& buf, SocketRef sock, PktCommandLogWrite* pCmd, const std::string& remoteName); //!< ログ出力コマンド処理
 	void CommandFlush(SocketRef sock, Pkt* pCmd); //!< フラッシュコマンド処理
 	void CommandFileClose(SocketRef sock, Pkt* pCmd); //!< 現在のログファイルを閉じる
 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 namespace LogViewer {
 	public struct MemMapRecord {
 		public const int NoCached = int.MinValue;
+		public const int NoParent = int.MaxValue;
 
 		public enum LogType {
 			Enter = 1,
@@ -26,33 +27,47 @@ namespace LogViewer {
 
 			public Core(DynamicMemMapView dmmv, ulong address) {
 				var logSize = dmmv.ReadInt32(address);
-				var bytes = dmmv.ReadBytes(address + 4, logSize);
+				address += 4;
 
-				int offset = 0;
-				this.DateTime = UnixTimeStampToDateTime(BitConverter.ToUInt64(bytes, offset));
-				offset += 8;
+				var end = (long)address + logSize;
 
-				var remoteNameSize = BitConverter.ToInt32(bytes, offset);
-				if (remoteNameSize < 0 || bytes.Length < offset + remoteNameSize)
+				this.DateTime = UnixTimeStampToDateTime(dmmv.ReadUInt64(address));
+				address += 8;
+
+				var remoteNameSize = dmmv.ReadInt32(address);
+				if (remoteNameSize < 0 || end < (long)address + remoteNameSize)
 					throw new MemMapFileException(string.Concat("アドレス ", address.ToString("X16"), " のIPアドレス名サイズが不正(", remoteNameSize, ")です。"), dmmv.Source.FileName);
-				offset += 4;
+				address += 4;
 
-				this.Ip = Encoding.UTF8.GetString(bytes, offset, remoteNameSize);
-				offset += remoteNameSize;
+				this.Ip = dmmv.ReadStringAnsi(address, remoteNameSize);
+				address += (ulong)remoteNameSize;
 
-				this.Pid = BitConverter.ToUInt32(bytes, offset);
-				offset += 4;
+				this.Pid = dmmv.ReadUInt32(address);
+				address += 4;
 
-				this.Tid = BitConverter.ToUInt32(bytes, offset);
-				offset += 4;
+				this.Tid = dmmv.ReadUInt32(address);
+				address += 4;
 
-				this.Depth = BitConverter.ToInt16(bytes, offset);
-				offset += 2;
+				this.Depth = dmmv.ReadInt16(address);
+				address += 2;
 
-				this.LogType = (LogType)BitConverter.ToInt16(bytes, offset);
-				offset += 2;
+				this.LogType = (LogType)dmmv.ReadInt16(address);
+				address += 2;
 
-				this.FrameName = Encoding.UTF8.GetString(bytes, offset, bytes.Length - offset);
+				this.FrameName = Encoding.UTF8.GetString(dmmv.ReadBytes(address, (int)(end - (long)address)));
+			}
+
+			public static LogType GetLogType(DynamicMemMapView dmmv, ulong address) {
+				var logSize = dmmv.ReadInt32(address);
+				address += 4;
+				address += 8;
+				var remoteNameSize = dmmv.ReadInt32(address);
+				address += 4;
+				address += (ulong)remoteNameSize;
+				address += 4;
+				address += 4;
+				address += 2;
+				return (LogType)dmmv.ReadInt16(address);
 			}
 		}
 
@@ -76,6 +91,10 @@ namespace LogViewer {
 
 		public Core GetCore(DynamicMemMapView dmmv) {
 			return new Core(dmmv, this.Address);
+		}
+
+		public LogType GetLogType(DynamicMemMapView dmmv) {
+			return Core.GetLogType(dmmv, this.Address);
 		}
 
 		static DateTime UnixTimeStampToDateTime(ulong utcUnixTimeMs) {

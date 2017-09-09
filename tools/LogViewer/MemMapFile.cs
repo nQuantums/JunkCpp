@@ -535,6 +535,11 @@ namespace LogViewer {
 		public ulong CurrentViewPosition { get; protected set; }
 
 		/// <summary>
+		///	現在のビューの終了位置
+		/// </summary>
+		public ulong CurrentViewEndPosition { get; protected set; }
+
+		/// <summary>
 		///	現在のビューが割り当てられたメモリアドレス
 		/// </summary>
 		public IntPtr CurrentViewAddress { get; protected set; }
@@ -543,6 +548,11 @@ namespace LogViewer {
 		///	現在のビューの割り当てサイズ
 		/// </summary>
 		public ulong CurrentViewSize { get; protected set; }
+
+		/// <summary>
+		///	ファイル内の位置からメモリアドレスへのオフセット
+		/// </summary>
+		public long PositionToAddressOffset { get; protected set; }
 
 
 		/// <summary>
@@ -581,20 +591,18 @@ namespace LogViewer {
 		public byte this[ulong index] {
 			get {
 				unsafe {
-					if (index < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize <= index)
+					if (index < this.CurrentViewPosition || this.CurrentViewEndPosition <= index)
 						ReAllocateView(index);
 
-					byte* p = (byte*)this.CurrentViewAddress.ToPointer();
-					return p[index - this.CurrentViewPosition];
+					return *(byte*)(this.PositionToAddressOffset + (long)index);
 				}
 			}
 			set {
 				unsafe {
-					if (index < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize <= index)
+					if (index < this.CurrentViewPosition || this.CurrentViewEndPosition <= index)
 						ReAllocateView(index);
 
-					byte* p = (byte*)this.CurrentViewAddress.ToPointer();
-					p[index - this.CurrentViewPosition] = value;
+					*(byte*)(this.PositionToAddressOffset + (long)index) = value;
 				}
 			}
 		}
@@ -606,13 +614,7 @@ namespace LogViewer {
 		/// <param name="position">ファイル内での位置(bytes)</param>
 		/// <returns>構造体</returns>
 		public T Read<T>(ulong position) {
-			unsafe {
-				Type type = typeof(T);
-				int structSize = Marshal.SizeOf(type);
-				if (position < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize < position + (ulong)structSize)
-					ReAllocateView(position);
-				return (T)Marshal.PtrToStructure(new IntPtr((byte*)this.CurrentViewAddress.ToPointer() + position - this.CurrentViewPosition), type);
-			}
+			return (T)Read(position, typeof(T));
 		}
 
 		/// <summary>
@@ -624,9 +626,9 @@ namespace LogViewer {
 		public object Read(ulong position, Type type) {
 			unsafe {
 				int structSize = Marshal.SizeOf(type);
-				if (position < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize < position + (ulong)structSize)
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)structSize)
 					ReAllocateView(position);
-				return Marshal.PtrToStructure(new IntPtr((byte*)this.CurrentViewAddress.ToPointer() + position - this.CurrentViewPosition), type);
+				return Marshal.PtrToStructure(new IntPtr(this.PositionToAddressOffset + (long)position), type);
 			}
 		}
 
@@ -638,9 +640,9 @@ namespace LogViewer {
 		/// <returns>文字列</returns>
 		public string ReadStringAnsi(ulong position, int len) {
 			unsafe {
-				if (position < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize < position + (ulong)len)
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)len)
 					ReAllocateView(position);
-				return Marshal.PtrToStringAnsi(new IntPtr((byte*)this.CurrentViewAddress.ToPointer() + position - this.CurrentViewPosition), len);
+				return Marshal.PtrToStringAnsi(new IntPtr(this.PositionToAddressOffset + (long)position), len);
 			}
 		}
 
@@ -651,9 +653,22 @@ namespace LogViewer {
 		/// <returns>値</returns>
 		public sbyte ReadInt8(ulong position) {
 			unsafe {
-				if (position < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize < position + (ulong)1)
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)1)
 					ReAllocateView(position);
-				return (sbyte)Marshal.ReadByte(new IntPtr((byte*)this.CurrentViewAddress.ToPointer() + position - this.CurrentViewPosition));
+				return *(sbyte*)(this.PositionToAddressOffset + (long)position);
+			}
+		}
+
+		/// <summary>
+		/// 指定された位置から byte 型値を読み込む
+		/// </summary>
+		/// <param name="position">ファイル内での位置(bytes)</param>
+		/// <returns>値</returns>
+		public byte ReadUInt8(ulong position) {
+			unsafe {
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)1)
+					ReAllocateView(position);
+				return *(byte*)(this.PositionToAddressOffset + (long)position);
 			}
 		}
 
@@ -664,9 +679,22 @@ namespace LogViewer {
 		/// <returns>値</returns>
 		public Int16 ReadInt16(ulong position) {
 			unsafe {
-				if (position < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize < position + (ulong)2)
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)2)
 					ReAllocateView(position);
-				return Marshal.ReadInt16(new IntPtr((byte*)this.CurrentViewAddress.ToPointer() + position - this.CurrentViewPosition));
+				return *(Int16*)(this.PositionToAddressOffset + (long)position);
+			}
+		}
+
+		/// <summary>
+		/// 指定された位置から UInt16 型値を読み込む
+		/// </summary>
+		/// <param name="position">ファイル内での位置(bytes)</param>
+		/// <returns>値</returns>
+		public UInt16 ReadUInt16(ulong position) {
+			unsafe {
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)2)
+					ReAllocateView(position);
+				return *(UInt16*)(this.PositionToAddressOffset + (long)position);
 			}
 		}
 
@@ -677,9 +705,22 @@ namespace LogViewer {
 		/// <returns>値</returns>
 		public Int32 ReadInt32(ulong position) {
 			unsafe {
-				if (position < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize < position + (ulong)4)
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)4)
 					ReAllocateView(position);
-				return Marshal.ReadInt32(new IntPtr((byte*)this.CurrentViewAddress.ToPointer() + position - this.CurrentViewPosition));
+				return *(Int32*)(this.PositionToAddressOffset + (long)position);
+			}
+		}
+
+		/// <summary>
+		/// 指定された位置から UInt32 型値を読み込む
+		/// </summary>
+		/// <param name="position">ファイル内での位置(bytes)</param>
+		/// <returns>値</returns>
+		public UInt32 ReadUInt32(ulong position) {
+			unsafe {
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)4)
+					ReAllocateView(position);
+				return *(UInt32*)(this.PositionToAddressOffset + (long)position);
 			}
 		}
 
@@ -690,9 +731,22 @@ namespace LogViewer {
 		/// <returns>値</returns>
 		public Int64 ReadInt64(ulong position) {
 			unsafe {
-				if (position < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize < position + (ulong)8)
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)8)
 					ReAllocateView(position);
-				return Marshal.ReadInt64(new IntPtr((byte*)this.CurrentViewAddress.ToPointer() + position - this.CurrentViewPosition));
+				return *(Int64*)(this.PositionToAddressOffset + (long)position);
+			}
+		}
+
+		/// <summary>
+		/// 指定された位置から UInt64 型値を読み込む
+		/// </summary>
+		/// <param name="position">ファイル内での位置(bytes)</param>
+		/// <returns>値</returns>
+		public UInt64 ReadUInt64(ulong position) {
+			unsafe {
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)8)
+					ReAllocateView(position);
+				return *(UInt64*)(this.PositionToAddressOffset + (long)position);
 			}
 		}
 
@@ -704,42 +758,46 @@ namespace LogViewer {
 		/// <returns>バイト配列</returns>
 		public byte[] ReadBytes(ulong position, int length) {
 			unsafe {
-				if (position < this.CurrentViewPosition || this.CurrentViewPosition + this.CurrentViewSize < position + (ulong)length)
+				if (position < this.CurrentViewPosition || this.CurrentViewEndPosition < position + (ulong)length)
 					ReAllocateView(position);
 
 				byte[] buffer = new byte[length];
-				Marshal.Copy(new IntPtr((byte*)this.CurrentViewAddress.ToPointer() + position - this.CurrentViewPosition), buffer, 0, length);
+				Marshal.Copy(new IntPtr(this.PositionToAddressOffset + (long)position), buffer, 0, length);
 				return buffer;
 			}
 		}
 
 		/// <summary>
-		/// 指定された位置からビューを再割り当てする
+		/// 指定された位置が中心になるようビューを再割り当てする
 		/// </summary>
 		/// <param name="position">ファイル位置</param>
 		protected void ReAllocateView(ulong position) {
-			ReAllocateView(position, BlockSize);
+			ReAllocateView((ulong)Math.Max((long)position - BlockSize / 2, 0), BlockSize, position);
 		}
 
 		/// <summary>
 		/// 指定された位置からビューを再割り当てする
 		/// </summary>
-		/// <param name="position">ファイル位置</param>
+		/// <param name="start">割当開始ファイル位置</param>
 		/// <param name="size">割り当てサイズ(bytes)</param>
-		protected void ReAllocateView(ulong position, ulong size) {
+		/// <param name="position">アクセス希望位置</param>
+		protected void ReAllocateView(ulong start, ulong size, ulong position) {
 			if (this.View != null) {
 				this.View.Dispose();
 				this.View = null;
 				this.CurrentViewPosition = 0;
+				this.CurrentViewEndPosition = 0;
 				this.CurrentViewSize = 0;
 			}
 
-			this.View = this.Source.AllocateView(position, size);
+			this.View = this.Source.AllocateView(start, size);
 			this.CurrentViewPosition = this.View.Position;
 			this.CurrentViewAddress = this.View.Address;
+			this.PositionToAddressOffset = this.CurrentViewAddress.ToInt64() - (long)this.CurrentViewPosition;
 			this.CurrentViewSize = this.View.Size;
+			this.CurrentViewEndPosition = this.CurrentViewPosition + this.CurrentViewSize;
 
-			if (this.CurrentViewPosition + this.CurrentViewSize <= position)
+			if (this.CurrentViewEndPosition <= position)
 				throw new MemMapFileAccessException("DynamicMemMapView.ReAllocateView に渡された position がファイルサイズを超えています", this.Source.FileName);
 		}
 	}

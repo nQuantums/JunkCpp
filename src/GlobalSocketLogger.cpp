@@ -432,7 +432,7 @@ void LogServer::CommandBinaryLog(SocketRef sock, PktCommandBinaryLog* pCmd) {
 }
 
 //! ログ出力コマンド処理
-void LogServer::CommandWriteLog(SocketRef sock, PktCommandLogWrite* pCmd, const std::string& remoteName) {
+void LogServer::CommandWriteLog(std::vector<uint8_t>& buf, SocketRef sock, PktCommandLogWrite* pCmd, const std::string& remoteName) {
 	// ハンドラ呼び出し
 	CommandWriteLogHandler handler = m_CommandWriteLogHandler;
 	if (handler != NULL) {
@@ -443,13 +443,14 @@ void LogServer::CommandWriteLog(SocketRef sock, PktCommandLogWrite* pCmd, const 
 	// ※ログ出力中に形式が切り替えられることは想定していない
 	if (m_BinaryLog) {
 		// バイナリ形式でログ出力
-		std::vector<uint8_t> buf;
 		uint64_t utc = DateTime::NowUtc().UnixTimeMs();
 		uint32_t remoteNameSize = (uint32_t)remoteName.size();
 		uint32_t writePacketSize = pCmd->Size - sizeof(pCmd->Command);
 		uint32_t logSize = (uint32_t)(sizeof(utc) + sizeof(remoteNameSize) + remoteName.size() + writePacketSize);
 
-		buf.reserve(sizeof(logSize) + logSize);
+		if (buf.capacity() < sizeof(logSize) + logSize)
+			buf.reserve(sizeof(logSize) + logSize);
+		buf.resize(0);
 		buf.insert(buf.end(), (uint8_t*)&logSize, (uint8_t*)&logSize + sizeof(logSize));
 		buf.insert(buf.end(), (uint8_t*)&utc, (uint8_t*)&utc + sizeof(utc));
 		buf.insert(buf.end(), (uint8_t*)&remoteNameSize, (uint8_t*)&remoteNameSize + sizeof(remoteNameSize));
@@ -612,6 +613,7 @@ void LogServer::Client::ThreadProc() {
 	SocketRef sock = m_Socket;
 	std::string remoteName = m_RemoteName;
 	std::vector<char> buf(4096);
+	std::vector<uint8_t> tempBuf;
 	std::stringstream ss;
 
 	// ディレイは必要ない
@@ -646,7 +648,7 @@ void LogServer::Client::ThreadProc() {
 			m_pOwner->CommandBinaryLog(sock, (LogServer::PktCommandBinaryLog*)pCmd);
 			break;
 		case LogServer::CommandEnum::WriteLog:
-			m_pOwner->CommandWriteLog(sock, (LogServer::PktCommandLogWrite*)pCmd, remoteName);
+			m_pOwner->CommandWriteLog(tempBuf, sock, (LogServer::PktCommandLogWrite*)pCmd, remoteName);
 			break;
 		case LogServer::CommandEnum::Flush:
 			m_pOwner->CommandFlush(sock, pCmd);
