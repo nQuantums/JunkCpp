@@ -21,7 +21,8 @@
 #pragma pack(push, 1)
 struct jk_Logger_Frame {
 	int64_t EnterTime; //!< フレーム開始時間
-	wchar_t* pFrameName; //!< フレーム名
+	void* pData; //!< データ
+	int FrameNameLen; //!< フレーム名長
 
 	jk_Logger_Frame(const wchar_t* pszFrameName, const wchar_t* pszArgs = NULL);
 	~jk_Logger_Frame();

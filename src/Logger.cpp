@@ -41,19 +41,22 @@ JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameStart(jk_Logger_Frame* pFrame, 
 
 	pFrame->EnterTime = jk::Clock::SysNS();
 #if defined _MSC_VER
-	size_t len = wcslen(pszFrameName);
-	pFrame->pFrameName = new wchar_t[len + 1];
-	memcpy(pFrame->pFrameName, pszFrameName, (len + 1) * sizeof(wchar_t));
-
 	jk::GlobalSocketLogger::IncrementDepth();
 
-	std::wstringstream ss;
-
 	// フレーム名と引数追加
-	ss << pFrame->pFrameName << L"(" << (pszArgs != NULL ? pszArgs : L"") << L")";
+	size_t len = wcslen(pszFrameName);
+	pFrame->FrameNameLen = (int)len;
+	std::wstring& s = *((std::wstring*&)pFrame->pData = new std::wstring(pszFrameName, len));
+	if (pszArgs) {
+		s += L"(";
+		s += pszArgs;
+		s += L")";
+	} else {
+		s += L"()";
+	}
 
 	// ログをサーバーへ送る
-	jk::GlobalSocketLogger::WriteLog((uint32_t)jk::GlobalSocketLogger::GetDepth(), jk::LogServer::LogTypeEnum::Enter, ss.str().c_str());
+	jk::GlobalSocketLogger::WriteLog((uint32_t)jk::GlobalSocketLogger::GetDepth(), jk::LogServer::LogTypeEnum::Enter, s.c_str());
 #else
 #error gcc version is not implemented.
 #endif
@@ -68,17 +71,22 @@ JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameEnd(jk_Logger_Frame* pFrame) {
 	s_Recurse.Get() = true;
 
 #if defined _MSC_VER
-	std::wstringstream ss;
+	std::wstring& s = *(std::wstring*)pFrame->pData;
 
-	// フレーム名と所要時間追加
-	ss << pFrame->pFrameName << JUNKLOG_DELIMITER << (jk::Clock::SysNS() - pFrame->EnterTime) / 1000000 << L"ms";
+	// 所要時間追加
+	wchar_t time[32];
+	_i64tow_s((jk::Clock::SysNS() - pFrame->EnterTime) / 1000000, time, 32, 10);
+	s.resize(pFrame->FrameNameLen);
+	s += JUNKLOG_DELIMITER;
+	s += time;
+	s += L"ms";
 
 	// ログをサーバーへ送る
-	jk::GlobalSocketLogger::WriteLog((uint32_t)jk::GlobalSocketLogger::GetDepth(), jk::LogServer::LogTypeEnum::Leave, ss.str().c_str());
+	jk::GlobalSocketLogger::WriteLog((uint32_t)jk::GlobalSocketLogger::GetDepth(), jk::LogServer::LogTypeEnum::Leave, s.c_str());
 
 	jk::GlobalSocketLogger::DecrementDepth();
 
-	delete [] pFrame->pFrameName;
+	delete &s;
 #else
 #error gcc version is not implemented.
 #endif
