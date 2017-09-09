@@ -14,6 +14,13 @@ namespace LogViewer {
 			Leave = 2,
 		}
 
+		public struct SearchArgs {
+			public string Ip;
+			public UInt32 Pid;
+			public UInt32 Tid;
+			public string Method;
+		}
+
 		public struct Core {
 			public DateTime DateTime;
 			public string Ip;
@@ -59,15 +66,47 @@ namespace LogViewer {
 
 			public static LogType GetLogType(DynamicMemMapView dmmv, ulong address) {
 				var logSize = dmmv.ReadInt32(address);
+				address += 12;
+				var remoteNameSize = dmmv.ReadInt32(address);
+				address += 14 + (ulong)remoteNameSize;
+				return (LogType)dmmv.ReadInt16(address);
+			}
+
+			public static bool Match(DynamicMemMapView dmmv, ulong address, SearchArgs args) {
+				var logSize = dmmv.ReadInt32(address);
 				address += 4;
+
+				var end = (long)address + logSize;
+
 				address += 8;
+
 				var remoteNameSize = dmmv.ReadInt32(address);
 				address += 4;
+
+				if (!string.IsNullOrEmpty(args.Ip)) {
+					if (args.Ip != dmmv.ReadStringAnsi(address, remoteNameSize))
+						return false;
+				}
 				address += (ulong)remoteNameSize;
+
+				if (args.Pid != 0) {
+					if (args.Pid != dmmv.ReadUInt32(address))
+						return false;
+				}
 				address += 4;
-				address += 4;
-				address += 2;
-				return (LogType)dmmv.ReadInt16(address);
+
+				if(args.Tid != 0) {
+					if (args.Tid != dmmv.ReadUInt32(address))
+						return false;
+				}
+				address += 8;
+
+				if (!string.IsNullOrEmpty(args.Method)) {
+					if (Encoding.UTF8.GetString(dmmv.ReadBytes(address, (int)(end - (long)address))).IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase) == -1)
+						return false;
+				}
+
+				return true;
 			}
 		}
 
@@ -95,6 +134,10 @@ namespace LogViewer {
 
 		public LogType GetLogType(DynamicMemMapView dmmv) {
 			return Core.GetLogType(dmmv, this.Address);
+		}
+
+		public bool IsMatched(DynamicMemMapView dmmv, SearchArgs args) {
+			return Core.Match(dmmv, this.Address, args);
 		}
 
 		static DateTime UnixTimeStampToDateTime(ulong utcUnixTimeMs) {

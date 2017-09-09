@@ -11,15 +11,6 @@ using System.Reflection;
 
 namespace LogViewer {
 	public partial class Form1 : Form {
-        struct SearchArgs
-        {
-            public string Ip;
-            public UInt32 Pid;
-            public UInt32 Tid;
-            public string Method;
-        }
-
-
 		static Color[] ColorTable = new Color[] {
 			Color.FromArgb(127, 127, 255),
 			Color.FromArgb(127, 255, 127),
@@ -294,9 +285,10 @@ namespace LogViewer {
         /// <param name="args">検索設定</param>
         /// <param name="countMax">検索最大レコード数</param>
         /// <returns>該当するレコードインデックスの配列</returns>
-        List<int> SearchRecordIndices(LogDocument document, bool forward, int startIndex, SearchArgs args, int countMax)
+        List<int> SearchRecordIndices(LogDocument document, bool forward, int startIndex, MemMapRecord.SearchArgs args, int countMax)
         {
             var result = new List<int>();
+			var dmmv = document.Dmmv;
             var records = document.Records;
 
             if (forward)
@@ -305,14 +297,11 @@ namespace LogViewer {
                 var end = document.EndRecordIndex;
                 for (int i = start; i <= end; i++)
                 {
-                    var r = records[i];
-					var c = r.GetCore(_LogDocument.Dmmv);
-                    if ((args.Ip == null || c.Ip == args.Ip) && (args.Pid == 0 || c.Pid == args.Pid) && (args.Tid == 0 || c.Tid == args.Tid) && (args.Method == null || 0 <= c.FrameName.IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase)))
-                    {
-                        result.Add(i);
-                        if (result.Count == countMax)
-                            break;
-                    }
+					if(records[i].IsMatched(dmmv, args)) {
+						result.Add(i);
+						if (result.Count == countMax)
+							break;
+					}
                 }
             }
             else
@@ -321,14 +310,11 @@ namespace LogViewer {
                 var end = document.StartRecordIndex;
                 for (int i = start; end <= i; i--)
                 {
-                    var r = records[i];
-					var c = r.GetCore(_LogDocument.Dmmv);
-                    if ((args.Ip == null || c.Ip == args.Ip) && (args.Pid == 0 || c.Pid == args.Pid) && (args.Tid == 0 || c.Tid == args.Tid) && (args.Method == null || 0 <= c.FrameName.IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase)))
-                    {
-                        result.Add(i);
-                        if (result.Count == countMax)
-                            break;
-                    }
+					if (records[i].IsMatched(dmmv, args)) {
+						result.Add(i);
+						if (result.Count == countMax)
+							break;
+					}
                 }
             }
 
@@ -338,9 +324,9 @@ namespace LogViewer {
         /// <summary>
         /// 現在のコントロールに設定されている検索条件から検索用引数を取得する
         /// </summary>
-        SearchArgs GetSearchArgs()
+        MemMapRecord.SearchArgs GetSearchArgs()
         {
-            var args = new SearchArgs();
+            var args = new MemMapRecord.SearchArgs();
 
             args.Ip = this.tbIp.Text;
             if (string.IsNullOrEmpty(args.Ip))
@@ -368,7 +354,7 @@ namespace LogViewer {
         /// </summary>
         /// <param name="forward">進みながら検索するなら true</param>
         /// <param name="args">検索設定</param>
-        void Search(bool forward, SearchArgs args)
+        void Search(bool forward, MemMapRecord.SearchArgs args)
         {
 			var startIndex = GetSelectedRecordIndex();
 
