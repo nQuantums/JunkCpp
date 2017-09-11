@@ -230,13 +230,14 @@ namespace LogViewer {
 
         public void QueryFrameInternalRecordIndices(Frame frame, List<int> sameThreadRecordIndicesRecords, List<int> otherThreadRecordIndicesRecords)
         {
+			var dmmv = _LogDocument.Dmmv;
 			var records = _LogDocument.Records;
             var start = Math.Max(_LogDocument.StartRecordIndex, frame.StartRecordIndex + 1);
             var end = Math.Min(_LogDocument.EndRecordIndex, frame.EndRecordIndex - 1);
+			var args = new MemMapRecord.SearchArgs { Ip = frame.Ip, Pid = frame.Pid, Tid = frame.Tid };
 			for (int i = start; i < end; i++) {
 				var r = records[i];
-				var c = r.GetCore(_LogDocument.Dmmv);
-                if (c.Ip == frame.Ip && c.Pid == frame.Pid && c.Tid == frame.Tid)
+                if (r.IsMatched(dmmv, args))
                     sameThreadRecordIndicesRecords.Add(i);
                 else
                     otherThreadRecordIndicesRecords.Add(i);
