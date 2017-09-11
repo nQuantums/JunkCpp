@@ -171,6 +171,9 @@ namespace LogViewer
 					if(frame.Depth < c.Depth) {
 						// 子要素ならその終了を検索、キャッシュ持ってたら高速化される
 						i = Search(document, i, cancelInfo).EndRecordIndex;
+						if (i == NullEndIndex) {
+							break;
+						}
 					} else {
 						// 自分の終了か判定
 						if (!c.Enter) {
@@ -208,6 +211,9 @@ namespace LogViewer
 					if (frame.Depth < c.Depth) {
 						// 子要素ならその開始を検索、キャッシュ持ってたら高速化される
 						i = Search(document, i, cancelInfo).StartRecordIndex;
+						if (i == NullStartIndex) {
+							break;
+						}
 					} else {
 						// 自分の開始か判定
 						if (c.Enter) {
@@ -360,8 +366,12 @@ namespace LogViewer
 					break;
 				if (core.Depth < c.Depth) {
 					// 子要素ならその開始を検索、キャッシュ持ってたら高速化される
-					if (c.LogType == MemMapRecord.LogType.Leave)
+					if (c.LogType == MemMapRecord.LogType.Leave) {
 						i = Search(document, i, cancelInfo).StartRecordIndex;
+						if(i == NullStartIndex) {
+							break;
+						}
+					}
 				} else {
 					// 自分の開始か判定
 					if (c.Enter) {
@@ -405,8 +415,8 @@ namespace LogViewer
             frame.Depth++;
 
             var records = document.Records;
-            var start = frame.StartRecordIndex + 1;
-            var end = frame.EndRecordIndex - 1;
+			var start = Math.Max(frame.StartRecordIndex + 1, document.StartRecordIndex);
+			var end = Math.Min(frame.EndRecordIndex - 1, document.EndRecordIndex);
             for (int i = start; i <= end; i++)
             {
                 CancelInfo.Handle(cancelInfo);
