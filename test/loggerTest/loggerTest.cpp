@@ -122,6 +122,12 @@ struct Struct1 {
 	void Func5(const wchar_t* msg) {
 		JUNK_LOG_FUNC1(msg);
 	}
+	void Func5(const char* msg) {
+		JUNK_LOG_FUNC1(msg);
+	}
+	void Func5(const std::string& msg) {
+		JUNK_LOG_FUNC1(msg);
+	}
 };
 
 bool LogClientTest() {
@@ -135,10 +141,14 @@ bool LogClientTest() {
 		} else if (line == "func") {
 			Struct1 s1;
 			//s1.Func();
-			for (int i = 0; i < 10000000; i++) {
+			for (int i = 0; i < 10; i++) {
 				//s1.Func1(i + 1);
 				//s1.Func5(L"メッセージだよ");
-				s1.Func5(L"メッセージだよ\r\n改行ありだよ");
+				s1.Func5(L"UTF-16 メッセージだよ\r\n改行ありだよ");
+				s1.Func5((const wchar_t*)nullptr);
+				s1.Func5("SJis メッセージだよ\r\n改行ありだよ");
+				s1.Func5(std::string("SJis の std::string メッセージだよ\r\n改行ありだよ"));
+				s1.Func5((const char*)nullptr);
 			}
 		} else if (line == "flush") {
 			jk::GlobalSocketLogger::Flush();
