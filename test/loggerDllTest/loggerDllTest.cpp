@@ -65,7 +65,17 @@ struct Struct1 {
 			JUNK_LOG_FRAME4(Frame, a, b, c, d);
 		}
 	}
+	void Func5(const wchar_t* msg) {
+		JUNK_LOG_FUNC1(msg);
+	}
+	void Func5(const char* msg) {
+		JUNK_LOG_FUNC1(msg);
+	}
+	void Func5(const std::string& msg) {
+		JUNK_LOG_FUNC1(msg);
+	}
 };
+
 
 bool LogClientTest() {
 	jk_Logger_Startup(L"192.168.56.1", 33777);
@@ -76,10 +86,21 @@ bool LogClientTest() {
 		if (line == "quit") {
 			break;
 		} else if (line == "func") {
+			//Struct1 s1;
+			//s1.Func();
+			//for (int i = 0; i < 10; i++)
+			//	s1.Func1(i + 1);
 			Struct1 s1;
-			s1.Func();
-			for (int i = 0; i < 10; i++)
-				s1.Func1(i + 1);
+			//s1.Func();
+			for (int i = 0; i < 10; i++) {
+				//s1.Func1(i + 1);
+				//s1.Func5(L"メッセージだよ");
+				s1.Func5(L"UTF-16 メッセージだよ\r\n改行ありだよ");
+				s1.Func5((const wchar_t*)nullptr);
+				s1.Func5("SJis メッセージだよ\r\n改行ありだよ");
+				s1.Func5(std::string("SJis の std::string メッセージだよ\r\n改行ありだよ"));
+				s1.Func5((const char*)nullptr);
+			}
 		}
 	}
 

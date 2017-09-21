@@ -87,6 +87,12 @@ inline jk_Logger_Stream& operator<<(jk_Logger_Stream& stream, const std::string&
 	}
 }
 
+inline std::wstring jk_ExeFileName() {
+	wchar_t path[MAX_PATH + 1];
+	::GetModuleFileNameW(NULL, path, MAX_PATH);
+	return path;
+}
+
 #define JUNK_LOG_FUNC_ARGSVAR __jk_log_func_args__
 #define JUNK_LOG_FUNC_BEGIN jk_Logger_Stream JUNK_LOG_FUNC_ARGSVAR
 #define JUNK_LOG_FUNC_ARGS_BEGIN(arg) jk_Logger_Stream JUNK_LOG_FUNC_ARGSVAR; JUNK_LOG_FUNC_ARGSVAR << L#arg L" = " << (arg)

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LogViewer
 {
-    public class LogDocument
+    public class LogDocument : IDisposable
     {
         public string FileName = "";
         public string Title = "";
@@ -83,5 +83,43 @@ namespace LogViewer
             endRecordIndex -= this.StartRecordIndex;
             return true;
         }
-    }
+
+		#region IDisposable Support
+		private bool disposedValue = false; // 重複する呼び出しを検出するには
+
+		protected virtual void Dispose(bool disposing) {
+			if (!disposedValue) {
+				if (disposing) {
+					// TODO: マネージ状態を破棄します (マネージ オブジェクト)。
+				}
+
+				// アンマネージ リソース (アンマネージ オブジェクト) を解放し、下のファイナライザーをオーバーライドします。
+				// 大きなフィールドを null に設定します。
+				if (this.MemMapFile != null) {
+					this.MemMapFile.Dispose();
+					this.MemMapFile = null;
+				}
+				if (this.Dmmv != null) {
+					this.Dmmv.Dispose();
+					this.Dmmv = null;
+				}
+				this.Records = null;
+
+				disposedValue = true;
+			}
+		}
+
+		~LogDocument() {
+			// このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+			Dispose(false);
+		}
+
+		// このコードは、破棄可能なパターンを正しく実装できるように追加されました。
+		public void Dispose() {
+			// このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		#endregion
+	}
 }

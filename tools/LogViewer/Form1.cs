@@ -232,10 +232,10 @@ namespace LogViewer {
         {
 			var dmmv = _LogDocument.Dmmv;
 			var records = _LogDocument.Records;
-            var start = Math.Max(_LogDocument.StartRecordIndex, frame.StartRecordIndex + 1);
-            var end = Math.Min(_LogDocument.EndRecordIndex, frame.EndRecordIndex - 1);
+            var start = Math.Max(_LogDocument.StartRecordIndex, frame.StartRecordIndex);
+            var end = Math.Min(_LogDocument.EndRecordIndex, frame.EndRecordIndex);
 			var args = new MemMapRecord.SearchArgs { Ip = frame.Ip, Pid = frame.Pid, Tid = frame.Tid };
-			for (int i = start; i < end; i++) {
+			for (int i = start; i <= end; i++) {
 				var r = records[i];
                 if (r.IsMatched(dmmv, args))
                     sameThreadRecordIndicesRecords.Add(i);

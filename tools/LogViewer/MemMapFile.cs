@@ -299,29 +299,6 @@ namespace LogViewer {
 		}
 
 		/// <summary>
-		/// ファイナライザ
-		/// </summary>
-		~MemMapFile() {
-			Dispose();
-		}
-
-		/// <summary>
-		///	オブジェクト破棄
-		/// </summary>
-		public void Dispose() {
-			if (m_MappingHandle != IntPtr.Zero) {
-				ReleaseViews();
-				CloseHandle(m_MappingHandle);
-				m_MappingHandle = IntPtr.Zero;
-			}
-			if (m_FileHandle != IntPtr.Zero) {
-				CloseHandle(m_FileHandle);
-				m_FileHandle = IntPtr.Zero;
-			}
-			GC.SuppressFinalize(this);
-		}
-
-		/// <summary>
 		/// 指定されたファイル位置をメモリに割り当てる
 		/// </summary>
 		/// <param name="position">位置</param>
@@ -376,6 +353,44 @@ namespace LogViewer {
 				m_Views.Clear();
 			}
 		}
+
+		#region IDisposable Support
+		private bool disposedValue = false; // 重複する呼び出しを検出するには
+
+		protected virtual void Dispose(bool disposing) {
+			if (!disposedValue) {
+				if (disposing) {
+					// マネージ状態を破棄します (マネージ オブジェクト)。
+				}
+
+				// アンマネージ リソース (アンマネージ オブジェクト) を解放し、下のファイナライザーをオーバーライドします。
+				// 大きなフィールドを null に設定します。
+				if (m_MappingHandle != IntPtr.Zero) {
+					ReleaseViews();
+					CloseHandle(m_MappingHandle);
+					m_MappingHandle = IntPtr.Zero;
+				}
+				if (m_FileHandle != IntPtr.Zero) {
+					CloseHandle(m_FileHandle);
+					m_FileHandle = IntPtr.Zero;
+				}
+
+				disposedValue = true;
+			}
+		}
+
+		~MemMapFile() {
+			// このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+			Dispose(false);
+		}
+
+		// このコードは、破棄可能なパターンを正しく実装できるように追加されました。
+		public void Dispose() {
+			// このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		#endregion
 	}
 
 	/// <summary>
@@ -421,24 +436,6 @@ namespace LogViewer {
 			this.Address = address;
 			this.ViewAddress = viewAddress;
 			this.Size = size;
-		}
-
-		/// <summary>
-		/// ファイナライザ
-		/// </summary>
-		~MemMapView() {
-			Dispose();
-		}
-
-		/// <summary>
-		///	オブジェクト破棄
-		/// </summary>
-		public void Dispose() {
-			if (this.Source != null) {
-				this.Source.ReleaseView(this);
-				this.Source = null;
-			}
-			GC.SuppressFinalize(this);
 		}
 
 		/// <summary>
@@ -506,6 +503,39 @@ namespace LogViewer {
 				return length;
 			}
 		}
+
+		#region IDisposable Support
+		private bool disposedValue = false; // 重複する呼び出しを検出するには
+
+		protected virtual void Dispose(bool disposing) {
+			if (!disposedValue) {
+				if (disposing) {
+					// マネージ状態を破棄します (マネージ オブジェクト)。
+				}
+
+				// アンマネージ リソース (アンマネージ オブジェクト) を解放し、下のファイナライザーをオーバーライドします。
+				// 大きなフィールドを null に設定します。
+				if (this.Source != null) {
+					this.Source.ReleaseView(this);
+					this.Source = null;
+				}
+
+				disposedValue = true;
+			}
+		}
+
+		~MemMapView() {
+			// このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+			Dispose(false);
+		}
+
+		// このコードは、破棄可能なパターンを正しく実装できるように追加されました。
+		public void Dispose() {
+			// このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		#endregion
 	}
 
 	/// <summary>
@@ -562,26 +592,6 @@ namespace LogViewer {
 		public DynamicMemMapView(MemMapFile source) {
 			this.Source = source;
 			this.FileSize = source.FileSize;
-		}
-
-		/// <summary>
-		/// ファイナライザ
-		/// </summary>
-		~DynamicMemMapView() {
-			Dispose();
-		}
-
-		/// <summary>
-		///	オブジェクト破棄
-		/// </summary>
-		public void Dispose() {
-			if (this.Source != null)
-				this.Source = null;
-			if (this.View != null) {
-				this.View.Dispose();
-				this.View = null;
-			}
-			GC.SuppressFinalize(this);
 		}
 
 		/// <summary>
@@ -800,6 +810,42 @@ namespace LogViewer {
 			if (this.CurrentViewEndPosition <= position)
 				throw new MemMapFileAccessException("DynamicMemMapView.ReAllocateView に渡された position がファイルサイズを超えています", this.Source.FileName);
 		}
+
+		#region IDisposable Support
+		private bool disposedValue = false; // 重複する呼び出しを検出するには
+
+		protected virtual void Dispose(bool disposing) {
+			if (!disposedValue) {
+				if (disposing) {
+					// マネージ状態を破棄します (マネージ オブジェクト)。
+				}
+
+				// アンマネージ リソース (アンマネージ オブジェクト) を解放し、下のファイナライザーをオーバーライドします。
+				// 大きなフィールドを null に設定します。
+				if (this.Source != null) {
+					this.Source = null;
+				}
+				if (this.View != null) {
+					this.View.Dispose();
+					this.View = null;
+				}
+
+				disposedValue = true;
+			}
+		}
+
+		~DynamicMemMapView() {
+			// このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+			Dispose(false);
+		}
+
+		// このコードは、破棄可能なパターンを正しく実装できるように追加されました。
+		public void Dispose() {
+			// このコードを変更しないでください。クリーンアップ コードを上の Dispose(bool disposing) に記述します。
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		#endregion
 	}
 
 	/// <summary>
