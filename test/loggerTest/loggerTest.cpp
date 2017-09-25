@@ -11,6 +11,7 @@
 #include "../../src/Error.h"
 #include "../../src/Directory.h"
 #include "../../src/DateTime.h"
+#include "../../src/Logger.h"
 #include <time.h>
 #include <atltime.h>
 
@@ -50,7 +51,6 @@ void CommandWriteLogHandler(jk::SocketRef sock, jk::LogServer::PktCommandLogWrit
 
 bool LogServerTest() {
 	jk::LogServer::Startup();
-
 	jk::LogServer server;
 
 	server.SetCommandWriteLogHandler(CommandWriteLogHandler);
@@ -62,11 +62,23 @@ bool LogServerTest() {
 
 	std::cout << "Log server started." << std::endl;
 
+	jk_Logger_Startup(L"127.0.0.1", 33777);
+	JUNK_LOG_FUNC1(jk_ExeFileName());
+
 	for (;;) {
 		std::string line;
 		std::getline(std::cin, line);
-		if (line == "quit")
+		if (line == "quit") {
 			break;
+		} else if (line == "flush") {
+			jk::GlobalSocketLogger::Flush();
+		} else if (line == "fclose") {
+			jk::GlobalSocketLogger::FileClose();
+		} else if (line == "binary") {
+			jk::GlobalSocketLogger::BinaryLog(true);
+		} else if (line == "text") {
+			jk::GlobalSocketLogger::BinaryLog(false);
+		}
 	}
 
 	server.Stop();

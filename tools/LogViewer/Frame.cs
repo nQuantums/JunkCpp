@@ -244,7 +244,11 @@ namespace LogViewer
 			public bool Valid1;
 			public bool Valid2;
 
-			public bool Valid => this.Valid1 || this.Valid2;
+			public bool Valid {
+                get{
+                    return this.Valid1 || this.Valid2;
+                }
+            }
 			public int StartIndex {
 				get {
 					if (this.Valid1) {
@@ -270,7 +274,11 @@ namespace LogViewer
 					return NullStartIndex;
 				}
 			}
-			public int EndIndex => Math.Max(this.Index1, this.Index2);
+			public int EndIndex {
+                get{
+                    return Math.Max(this.Index1, this.Index2);
+                }
+            }
 			public int ParentIndex {
 				get {
 					var parentIndex1 = this.Valid1 ? this.Records[this.Index1].CachedParentIndex : -1;

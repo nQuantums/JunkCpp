@@ -72,6 +72,10 @@ struct GlobalSocketLogger::Instance {
 	std::wstring LocalIpAddress;
 	bool BinaryLog;
 
+	Instance() {
+		BinaryLog = false;
+	}
+
 	virtual intptr_t& Depth() {
 		return s_Depth.Get();
 	}

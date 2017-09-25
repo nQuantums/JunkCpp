@@ -30,7 +30,11 @@ namespace LogViewer {
 			public LogType LogType;
 			public string FrameName;
 
-			public bool Enter => this.LogType == LogType.Enter;
+			public bool Enter {
+                get{
+                    return this.LogType == LogType.Enter;
+                }
+            }
 
 			public Core(DynamicMemMapView dmmv, ulong address) {
 				var logSize = dmmv.ReadInt32(address);
@@ -102,9 +106,10 @@ namespace LogViewer {
 				address += 8;
 
 				if (!string.IsNullOrEmpty(args.Method)) {
-					if (Encoding.UTF8.GetString(dmmv.ReadBytes(address, (int)(end - (long)address))).IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase) == -1)
-						return false;
-				}
+                    var text = Encoding.UTF8.GetString(dmmv.ReadBytes(address, (int)(end - (long)address)));
+                    if (text.IndexOf(args.Method, StringComparison.CurrentCultureIgnoreCase) == -1)
+                        return false;
+                }
 
 				return true;
 			}

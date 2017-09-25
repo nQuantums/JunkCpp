@@ -93,3 +93,11 @@ JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameEnd(jk_Logger_Frame* pFrame) {
 
 	s_Recurse.Get() = false;
 }
+
+JUNKLOGGERAPI jk_TempString* JUNKLOGGERCALL jk_GetRemoteName(SOCKET socket) {
+	std::wstring name = jk::SocketRef::GetRemoteNameW(socket);
+	void* pString = ::GlobalAlloc(GMEM_FIXED, name.size() + 1);
+	if(pString)
+		::CopyMemory(pString, name.c_str(), name.size() + 1);
+	return (jk_TempString*)pString;
+}

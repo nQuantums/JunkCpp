@@ -8,9 +8,9 @@
 #include "../../src/Logger.h"
 
 #if defined(_WIN64)
-#pragma comment(lib, "../../test/loggerDll/x64/Release/loggerDll.lib")
+#pragma comment(lib, "../../test/loggerDll/bin/x64/Release/loggerDll.lib")
 #else
-#pragma comment(lib, "../../test/loggerDll/Win32/Release/loggerDll32.lib")
+#pragma comment(lib, "../../test/loggerDll/bin/Win32/Release/loggerDll32.lib")
 #endif
 
 

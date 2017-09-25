@@ -2,6 +2,7 @@
 #ifndef __JUNK_LOGGER_H__
 #define __JUNK_LOGGER_H__
 
+#include <WinSock2.h>
 #include <Windows.h>
 #include <sstream>
 #include "JunkConfig.h"
@@ -30,9 +31,12 @@ struct jk_Logger_Frame {
 };
 #pragma pack(pop)
 
+struct jk_TempString;
+
 JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_Startup(const wchar_t* pszHost, int port);
 JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameStart(jk_Logger_Frame* pFrame, const wchar_t* pszFrameName, const wchar_t* pszArgs = NULL);
 JUNKLOGGERAPI void JUNKLOGGERCALL jk_Logger_FrameEnd(jk_Logger_Frame* pFrame);
+JUNKLOGGERAPI jk_TempString* JUNKLOGGERCALL jk_GetRemoteName(SOCKET socket);
 
 jk_Logger_Frame::jk_Logger_Frame(const wchar_t* pszFrameName, const wchar_t* pszArgs) {
 	jk_Logger_FrameStart(this, pszFrameName, pszArgs);
@@ -87,11 +91,39 @@ inline jk_Logger_Stream& operator<<(jk_Logger_Stream& stream, const std::string&
 	}
 }
 
+inline jk_Logger_Stream& operator<<(jk_Logger_Stream& stream, jk_TempString* value) {
+	if(value) {
+		stream << (const wchar_t*)value;
+		::GlobalFree(value);
+	}
+	return stream;
+}
+
+inline jk_Logger_Stream& operator<<(jk_Logger_Stream& stream, const GUID& value) {
+	if(&value) {
+		wchar_t buf[64] = { 0 };
+		_snwprintf_s(buf, sizeof(buf), 64, L"{%08X-%04hX-%04hX-%02X%02X-%02X%02X%02X%02X%02X%02X}", value.Data1, value.Data2, value.Data3, value.Data4[0], value.Data4[1], value.Data4[2], value.Data4[3], value.Data4[4], value.Data4[5], value.Data4[6], value.Data4[7]);
+		stream << buf;
+	}
+	return stream;
+}
+
+inline jk_Logger_Stream& operator<<(jk_Logger_Stream& stream, const GUID* value) {
+	if(value) {
+		wchar_t buf[64] = { 0 };
+		_snwprintf_s(buf, sizeof(buf), 64, L"{%08X-%04hX-%04hX-%02X%02X-%02X%02X%02X%02X%02X%02X}", value->Data1, value->Data2, value->Data3, value->Data4[0], value->Data4[1], value->Data4[2], value->Data4[3], value->Data4[4], value->Data4[5], value->Data4[6], value->Data4[7]);
+		stream << buf;
+	}
+	return stream;
+}
+
+
 inline std::wstring jk_ExeFileName() {
 	wchar_t path[MAX_PATH + 1];
 	::GetModuleFileNameW(NULL, path, MAX_PATH);
 	return path;
 }
+
 
 #define JUNK_LOG_FUNC_ARGSVAR __jk_log_func_args__
 #define JUNK_LOG_FUNC_BEGIN jk_Logger_Stream JUNK_LOG_FUNC_ARGSVAR
