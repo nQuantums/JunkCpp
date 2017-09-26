@@ -119,6 +119,7 @@ namespace LogViewer {
                new object[] { true });
             this.lvSameThread.VirtualMode = true;
             this.lvSameThread.RetrieveVirtualItem += lvSameThread_RetrieveVirtualItem;
+            this.lvSameThread.DoubleClick += lvSameThread_DoubleClick;
 
             this.tbMethod.KeyDown += tbMethod_KeyDown;
 
@@ -130,6 +131,7 @@ namespace LogViewer {
 			   new object[] { true });
 			this.lvOtherThread.VirtualMode = true;
 			this.lvOtherThread.RetrieveVirtualItem += LvOtherThread_RetrieveVirtualItem;
+            this.lvOtherThread.DoubleClick += lvOtherThread_DoubleClick;
 		}
 
         public Form1(LogDocument document)
@@ -767,5 +769,27 @@ namespace LogViewer {
                 MoveToMarkedFrame(si[0]);
             }
         }
-	}
+
+        void lvSameThread_DoubleClick(object sender, EventArgs e) {
+            var si = this.lvSameThread.SelectedIndices;
+            if(si.Count == 0)
+                return;
+            var index = si[0];
+            if(index < 0)
+                return;
+            MoveToRecord(_SameThreadRecordIndices[index]);
+            this.lvRecords.Focus();
+        }
+
+        void lvOtherThread_DoubleClick(object sender, EventArgs e) {
+            var si = this.lvOtherThread.SelectedIndices;
+            if (si.Count == 0)
+                return;
+            var index = si[0];
+            if (index < 0)
+                return;
+            MoveToRecord(_OtherThreadRecordIndices[index]);
+            this.lvRecords.Focus();
+        }
+    }
 }
