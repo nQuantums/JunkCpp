@@ -78,6 +78,7 @@ struct Struct1 {
 
 
 bool LogClientTest() {
+	JUNK_LOG_FUNC1(jk_ExeFileName());
 	jk_Logger_Startup(L"192.168.56.1", 33777);
 
 	for (;;) {

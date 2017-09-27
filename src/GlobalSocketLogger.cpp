@@ -70,30 +70,31 @@ struct GlobalSocketLogger::Instance {
 	std::wstring Host;
 	int Port;
 	std::wstring LocalIpAddress;
-	bool BinaryLog;
 
-	Instance() {
-		BinaryLog = false;
-	}
-
-	virtual intptr_t& Depth() {
-		return s_Depth.Get();
+	static Instance& Get() {
+		static Instance instance;
+		return instance;
 	}
 
 private:
 	static JUNK_TLS(intptr_t) s_Depth;
 };
 
-JUNK_TLS(intptr_t) GlobalSocketLogger::Instance::s_Depth;
+JUNK_TLS(intptr_t) s_Depth;
+__forceinline intptr_t& Depth() {
+	return s_Depth.Get();
+}
+
 static JUNK_TLS(char[256]) s_Buf1;
 static JUNK_TLS(char[256]) s_Buf2;
 
-static GlobalSocketLogger::Instance g_Instance;
-static GlobalSocketLogger::Instance* g_pInstance = &g_Instance;
+static GlobalSocketLogger::Instance* g_pInstance = NULL;
 
 
 //! まだ接続していなかったら接続してソケットを返す
 static SocketRef GetSocket() {
+	if(!g_pInstance)
+		return SocketRef(NULL);
 	CriticalSectionLock lock(&g_pInstance->CS);
 	if(g_pInstance->Sock.IsInvalidHandle()) {
 		g_pInstance->LocalIpAddress = Encoding::ASCII().GetString(Socket::GetLocalIPAddress(Socket::Af::IPv4));
@@ -125,6 +126,9 @@ GlobalSocketLogger::Instance* GlobalSocketLogger::GetInstance() {
 
 //! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
 void GlobalSocketLogger::Startup(const wchar_t* pszHost, int port) {
+	if(!g_pInstance) {
+		g_pInstance = &Instance::Get();
+	}
 	CriticalSectionLock lock(&g_pInstance->CS);
 	g_pInstance->Host = pszHost;
 	g_pInstance->Port = port;
@@ -133,6 +137,9 @@ void GlobalSocketLogger::Startup(const wchar_t* pszHost, int port) {
 
 //! ログ出力先など初期化、プログラム起動時一回だけ呼び出す、スレッドセーフ
 void GlobalSocketLogger::Startup(const char* pszHost, int port) {
+	if(!g_pInstance) {
+		g_pInstance = &Instance::Get();
+	}
 	CriticalSectionLock lock(&g_pInstance->CS);
 	g_pInstance->Host = Encoding::ASCII().GetString(pszHost);
 	g_pInstance->Port = port;
@@ -177,9 +184,14 @@ void GlobalSocketLogger::Cleanup() {
 
 //! サーバーへコマンドパケットを送り応答を取得する
 LogServer::Pkt* GlobalSocketLogger::Command(LogServer::TempBuf tempBuf, LogServer::Pkt* pCmd) {
+	if(!g_pInstance)
+		return NULL;
+
 	// 送って受け取るまでを排他処理とする
 	CriticalSectionLock lock(&g_pInstance->CS);
 	SocketRef sock = GetSocket();
+	if(sock.IsInvalidHandle())
+		return NULL;
 
 	// とりあえず送る
 	size_t size = pCmd->PacketSize();
@@ -264,17 +276,17 @@ void GlobalSocketLogger::FileClose() {
 
 //! 現在のスレッドの呼び出し深度の取得
 intptr_t GlobalSocketLogger::GetDepth() {
-	return g_pInstance->Depth();
+	return Depth();
 }
 
 //! 現在のスレッドの呼び出し深度をインクリメント
 intptr_t GlobalSocketLogger::IncrementDepth() {
-	return g_pInstance->Depth()++;
+	return Depth()++;
 }
 
 //! 現在のスレッドの呼び出し深度をデクリメント
 intptr_t GlobalSocketLogger::DecrementDepth() {
-	return g_pInstance->Depth()--;
+	return Depth()--;
 }
 
 

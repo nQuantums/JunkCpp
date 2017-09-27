@@ -140,6 +140,7 @@ struct Struct1 {
 };
 
 bool LogClientTest() {
+	JUNK_LOG_FRAME1(Test, jk_ExeFileName()); // Startup() 呼び出し前に呼べるかのテスト
 	jk::GlobalSocketLogger::Startup("127.0.0.1", 33777);
 	JUNK_LOG_FUNC1(jk_ExeFileName());
 
